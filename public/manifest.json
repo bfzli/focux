@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Focux: Focus On What Matters Most",
+  "version": "1.2",
+  "description": "Say goodbye to distractions and hello to productivity with our extension ✨",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "128": "/images/focux-logo-black.png"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "128": "/images/focux-logo-black.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["/js/content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "index.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
