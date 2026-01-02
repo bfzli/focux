@@ -1,7 +1,7 @@
 import "../ui/styles/focux.css";
 import ReactDOM from "react-dom/client";
 import { useState, useEffect, StrictMode } from "react";
-import { Info, Input, Websites, End, Header } from "../ui/components";
+import { Websites, End, Header } from "../ui/components";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -13,29 +13,72 @@ export default function Focux() {
   const [websites, setWebsites] = useState([]);
   const [url, setUrl] = useState("");
 
+  const isValidDomain = (formattedUrl) => {
+    try {
+      if (!formattedUrl || formattedUrl.trim() === "") return false;
+
+      const specialProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i;
+      if (specialProtocols.test(formattedUrl)) return false;
+
+      if (formattedUrl.includes(":")) return false;
+
+      const regex = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i;
+      if (!regex.test(formattedUrl)) return false;
+
+      let formattedNew = formattedUrl.replace(/^(https?:\/\/)/, "");
+      if (!formattedNew.includes(".")) return false;
+
+      return Boolean(new URL(`https://${formattedNew}`));
+    } catch (e) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     const isProd = chrome?.storage;
 
     if (isProd !== undefined) {
       chrome.storage.local.get(["focux-websites-2m31"], (result) => {
-        if (result["focux-websites-2m31"]) {
-          setWebsites(result["focux-websites-2m31"]);
+        const storedWebsites = result["focux-websites-2m31"] || [];
+        setWebsites(storedWebsites);
 
-          chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-            let activeTab = tabs[0];
-            let formattedUrl = activeTab.url;
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+          if (!tabs || !tabs[0] || !tabs[0].url) return;
 
-            const included = result["focux-websites-2m31"].find((www) => formattedUrl.includes(formattedUrl));
-    
-            if(!included) {
-              formattedUrl = formattedUrl.replace(/^(https?:\/\/)/, "");
-              formattedUrl = formattedUrl.replace(/^www\./, "");
-              formattedUrl = formattedUrl.replace(/\/.*$/, "");
-      
-              setUrl(formattedUrl);
-            }
-          });
-        }
+          let tabUrl = tabs[0].url;
+
+          if (!tabUrl || typeof tabUrl !== "string") return;
+
+          if (!tabUrl.startsWith("http://") && !tabUrl.startsWith("https://")) {
+            return;
+          }
+
+          const invalidProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i;
+          if (invalidProtocols.test(tabUrl)) {
+            return;
+          }
+
+          let formattedUrl = tabUrl;
+          formattedUrl = formattedUrl.replace(/^(https?:\/\/)/, "");
+          formattedUrl = formattedUrl.replace(/^www\./, "");
+          formattedUrl = formattedUrl.replace(/\/.*$/, "");
+
+          if (!formattedUrl || formattedUrl.trim() === "") return;
+
+          if (formattedUrl.includes(":")) {
+            return;
+          }
+
+          if (!formattedUrl.includes(".")) {
+            return;
+          }
+
+          const included = storedWebsites.find((www) => www.url === formattedUrl);
+  
+          if (!included && isValidDomain(formattedUrl)) {
+            setUrl(formattedUrl);
+          }
+        });
       });
     } 
     
@@ -55,16 +98,13 @@ export default function Focux() {
   return (
     <>
       <Header />
-      <Info />
 
-      <Input
+      <Websites 
+        websites={websites} 
+        setWebsites={setWebsites}
         url={url}
         setUrl={setUrl}
-        setWebsites={setWebsites}
-        websites={websites}
       />
-
-      <Websites websites={websites} setWebsites={setWebsites} />
       {/* {websites.length !== 0 && <End />} */}
     </>
   );

@@ -1,17 +1,27 @@
-import { BrowserwingIcon, FocuxIcon } from "../icons";
+import { useState, useEffect } from "react";
+import { FocuxIcon } from "../icons";
 
 export default function Header() {
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    if (chrome?.runtime) {
+      const manifest = chrome.runtime.getManifest();
+      setVersion(manifest.version || "");
+    }
+  }, []);
+
   return (
     <div className="header">
       <div className="brand">
         <FocuxIcon />
-        <span className="version">v1.2</span>
+        {version && <span className="version">v{version}</span>}
       </div>
 
       <div className="footer">
-        <span className="footer-text">By</span>
-        <a href="https://browserwings.com" target="_blank">
-          <BrowserwingIcon />
+        <span className="footer-text">Build by</span>
+        <a href="https://bfzli.com" target="_blank">
+          Benjamin
         </a>
       </div>
     </div>

@@ -67,28 +67,34 @@ export default function Input(props) {
 
   return (
     <form onSubmit={handleAddWebsite} className="input">
-      <div className="input-area">
-        <input
-          type="text"
-          value={url}
-          onChange={onInput}
-          placeholder="https://example.com"
-        />
-
-        <p className="error">
-          {error
-            ? "Entered URL is not valid!"
-            : exists
-            ? "Website was already added on the list!"
-            : '\u00A0'}
-        </p>
+      <div className="website-info">
+        <div className="input-content">
+          <div className="websiteText">
+            <span className="entry">https://</span>
+            <input
+              type="text"
+              value={url}
+              onChange={onInput}
+              placeholder="example.com"
+              className="input-url"
+            />
+          </div>
+          {(error || exists) && (
+            <p className="input-error">
+              {error
+                ? "Entered URL is not valid!"
+                : exists
+                ? "Website was already added on the list!"
+                : ''}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="input-button">
-        <button>
+      <div className="website-opearation">
+        <button type="submit" className="input-add-button">
           <AddIcon />
         </button>
-        <p className="error">&nbsp;</p>
       </div>
     </form>
   );
