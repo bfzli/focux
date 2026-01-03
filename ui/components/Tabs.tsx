@@ -11,7 +11,7 @@ export default function Tabs({
                     className={`tab ${activeTab === 'blocklist' ? 'tab-active' : 'tab-inactive'}`}
                     onClick={() => onTabChange('blocklist')}
                 >
-                    Blocked Sites
+                    Websites
                 </button>
                 <button
                     className={`tab ${activeTab === 'recommendations' ? 'tab-active' : 'tab-inactive'}`}

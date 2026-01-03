@@ -6,6 +6,26 @@ let originalFavicon = null
 let faviconLink = null
 let titleObserver = null
 
+function isExtensionContextValid() {
+    try {
+        if (typeof chrome === 'undefined' || !chrome.runtime) {
+            return false
+        }
+        const id = chrome.runtime.id
+        return id !== undefined && id !== null
+    } catch (e) {
+        return false
+    }
+}
+
+function hasChromeError() {
+    try {
+        return chrome.runtime.lastError !== undefined && chrome.runtime.lastError !== null
+    } catch (e) {
+        return true
+    }
+}
+
 function muteAllMedia() {
     const mediaElements = document.querySelectorAll('audio, video')
     mediaElements.forEach((element) => {
@@ -426,125 +446,179 @@ function removeBlockingOverlay() {
 }
 
 function checkAndUpdateBlocking() {
-    chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
-        const blockedWebsites = result['focux-websites-2m31'] || []
-        const timerState = result['focux-timer-2m31']
-        
-        if (timerState && timerState.whitelist) {
-            const cleanedWhitelist = timerState.whitelist.filter((id) =>
-                blockedWebsites.some((w) => w.id === id)
-            )
-            if (cleanedWhitelist.length !== timerState.whitelist.length) {
-                chrome.storage.local.set({
-                    'focux-timer-2m31': {
-                        ...timerState,
-                        whitelist: cleanedWhitelist
-                    }
-                })
+    if (!isExtensionContextValid()) {
+        return
+    }
+    
+    try {
+        chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
+            if (!isExtensionContextValid() || hasChromeError()) {
+                return
             }
-        }
-        const currentUrl = window.location.href
-        let shouldBlock = false
-
-        const invalidProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i
-        if (invalidProtocols.test(currentUrl)) {
-            return
-        }
-
-        if (!currentUrl.startsWith('http://') && !currentUrl.startsWith('https://')) {
-            return
-        }
-
-        let isTimerBlocking = false
-        if (timerState && timerState.isActive && timerState.endTime) {
-            const remaining = timerState.endTime - Date.now()
-            if (remaining > 0) {
-                const whitelistIds = timerState.whitelist || []
-                let isWhitelisted = false
-
-                if (whitelistIds.length > 0) {
+            
+            const blockedWebsites = result['focux-websites-2m31'] || []
+            const timerState = result['focux-timer-2m31']
+            
+            if (timerState && timerState.whitelist) {
+                const cleanedWhitelist = timerState.whitelist.filter((id) =>
+                    blockedWebsites.some((w) => w.id === id)
+                )
+                if (cleanedWhitelist.length !== timerState.whitelist.length) {
+                    if (!isExtensionContextValid()) {
+                        return
+                    }
                     try {
-                        const currentUrlObj = new URL(currentUrl)
-                        let currentHostname = currentUrlObj.hostname
-                        currentHostname = currentHostname.replace(/^www\./, '')
+                        chrome.storage.local.set({
+                            'focux-timer-2m31': {
+                                ...timerState,
+                                whitelist: cleanedWhitelist
+                            }
+                        }, () => {
+                            if (!isExtensionContextValid() || hasChromeError()) {
+                                return
+                            }
+                        })
+                    } catch (e) {
+                        return
+                    }
+                }
+            }
+            const currentUrl = window.location.href
+            let shouldBlock = false
 
-                        for (const website of blockedWebsites) {
-                            if (whitelistIds.includes(website.id)) {
-                                let whitelistUrl = website.url
-                                whitelistUrl = whitelistUrl.replace(/^www\./, '')
-                                if (currentHostname === whitelistUrl) {
-                                    isWhitelisted = true
-                                    break
+            const invalidProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i
+            if (invalidProtocols.test(currentUrl)) {
+                return
+            }
+
+            if (!currentUrl.startsWith('http://') && !currentUrl.startsWith('https://')) {
+                return
+            }
+
+            let isTimerBlocking = false
+            if (timerState && timerState.isActive && timerState.endTime) {
+                const remaining = timerState.endTime - Date.now()
+                if (remaining > 0) {
+                    const whitelistIds = timerState.whitelist || []
+                    let isWhitelisted = false
+
+                    if (whitelistIds.length > 0) {
+                        try {
+                            const currentUrlObj = new URL(currentUrl)
+                            let currentHostname = currentUrlObj.hostname
+                            currentHostname = currentHostname.replace(/^www\./, '')
+
+                            for (const website of blockedWebsites) {
+                                if (whitelistIds.includes(website.id)) {
+                                    let whitelistUrl = website.url
+                                    whitelistUrl = whitelistUrl.replace(/^www\./, '')
+                                    if (currentHostname === whitelistUrl) {
+                                        isWhitelisted = true
+                                        break
+                                    }
                                 }
                             }
+                        } catch (e) {
                         }
-                    } catch (e) {
                     }
-                }
 
-                if (!isWhitelisted) {
-                    shouldBlock = true
-                    isTimerBlocking = true
-                }
-            } else {
-                const newState = {
-                    isActive: false,
-                    endTime: null,
-                    duration: null,
-                    whitelist: timerState.whitelist || []
-                }
-                chrome.storage.local.set({ 'focux-timer-2m31': newState }, () => {
-                    chrome.runtime.sendMessage({ action: 'broadcastUpdate' }).catch(() => {})
-                    setTimeout(() => {
-                        checkAndUpdateBlocking()
-                    }, 100)
-                })
-            }
-        }
-
-        if (!shouldBlock) {
-            try {
-                const currentUrlObj = new URL(currentUrl)
-                let currentHostname = currentUrlObj.hostname
-
-                currentHostname = currentHostname.replace(/^www\./, '')
-
-                for (const website of blockedWebsites) {
-                    if (!website.active) continue
-
-                    let blockedUrl = website.url
-                    blockedUrl = blockedUrl.replace(/^www\./, '')
-
-                    if (currentHostname === blockedUrl) {
+                    if (!isWhitelisted) {
                         shouldBlock = true
-                        break
+                        isTimerBlocking = true
+                    }
+                } else {
+                    if (!isExtensionContextValid()) {
+                        return
+                    }
+                    const newState = {
+                        isActive: false,
+                        endTime: null,
+                        duration: null,
+                        whitelist: timerState.whitelist || []
+                    }
+                    try {
+                        chrome.storage.local.set({ 'focux-timer-2m31': newState }, () => {
+                            if (!isExtensionContextValid() || hasChromeError()) {
+                                return
+                            }
+                            try {
+                                if (isExtensionContextValid()) {
+                                    chrome.runtime.sendMessage({ action: 'broadcastUpdate' }).catch(() => {})
+                                }
+                            } catch (e) {
+                            }
+                            setTimeout(() => {
+                                checkAndUpdateBlocking()
+                            }, 100)
+                        })
+                    } catch (e) {
+                        return
                     }
                 }
-            } catch (e) {
             }
-        }
 
-        if (shouldBlock) {
-            injectBlockingOverlay(isTimerBlocking, timerState)
-        } else {
-            removeBlockingOverlay()
-        }
-    })
+            if (!shouldBlock) {
+                try {
+                    const currentUrlObj = new URL(currentUrl)
+                    let currentHostname = currentUrlObj.hostname
+
+                    currentHostname = currentHostname.replace(/^www\./, '')
+
+                    for (const website of blockedWebsites) {
+                        if (!website.active) continue
+
+                        let blockedUrl = website.url
+                        blockedUrl = blockedUrl.replace(/^www\./, '')
+
+                        if (currentHostname === blockedUrl) {
+                            shouldBlock = true
+                            break
+                        }
+                    }
+                } catch (e) {
+                }
+            }
+
+            if (shouldBlock) {
+                injectBlockingOverlay(isTimerBlocking, timerState)
+            } else {
+                removeBlockingOverlay()
+            }
+        })
+    } catch (e) {
+        return
+    }
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'updateBlocking') {
-        checkAndUpdateBlocking()
-        sendResponse({ success: true })
+if (isExtensionContextValid()) {
+    try {
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (!isExtensionContextValid()) {
+                return true
+            }
+            if (request.action === 'updateBlocking') {
+                checkAndUpdateBlocking()
+                sendResponse({ success: true })
+            }
+            return true
+        })
+    } catch (e) {
     }
-    return true
-})
+}
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && (changes['focux-websites-2m31'] || changes['focux-timer-2m31'])) {
-        checkAndUpdateBlocking()
+if (isExtensionContextValid()) {
+    try {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (!isExtensionContextValid()) {
+                return
+            }
+            if (areaName === 'local' && (changes['focux-websites-2m31'] || changes['focux-timer-2m31'])) {
+                checkAndUpdateBlocking()
+            }
+        })
+    } catch (e) {
     }
-})
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkAndUpdateBlocking)

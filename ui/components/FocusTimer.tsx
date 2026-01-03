@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Website } from '@/types'
+import { EmptyIcon } from '@/ui/icons'
 
 interface TimerState {
     isActive: boolean
@@ -227,7 +228,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                         onChange={onToggle}
                         className='sr-only peer'
                     />
-                    <div className="relative w-8 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[17px] after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-white peer-checked:after:bg-[#212331]"></div>
+                    <div className="relative w-8 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[17px] after:content-[''] after:absolute after:top-px after:left-px after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-white peer-checked:after:bg-[#212331]"></div>
                 </label>
             </div>
         )
@@ -235,16 +236,12 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
 
     const websitesList = (
         <div className='focus-timer-websites'>
-            <div className='focus-timer-websites-title'>Select Whitelist Sites</div>
-            <div className='websites'>
-                {websites.length === 0 ? (
-                    <div className='empty'>
-                        <div className='empty-text'>
-                            No websites in the focus list. Add one in Blocked Sites tab.
-                        </div>
-                    </div>
-                ) : (
-                    websites.map((website, index) => (
+            {websites.length > 0 && (
+                <div className='focus-timer-websites-title'>Whitelisted Websites</div>
+            )}
+            {websites.length > 0 ? (
+                <div className='websites'>
+                    {websites.map((website, index) => (
                         <WhitelistWebsiteItem
                             key={website.id}
                             website={website}
@@ -252,9 +249,18 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                             onToggle={() => toggleWhitelist(website.id)}
                             isLast={index === websites.length - 1}
                         />
-                    ))
-                )}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                <div className='focus-timer-empty'>
+                    <div className='empty'>
+                        <EmptyIcon />
+                        <p className='empty-text'>
+                            No websites in the list to whitelist for timer.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     )
 
@@ -268,13 +274,14 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                             <div className='focus-timer-time'>{formatTime(displayTime)}</div>
                             <div className='focus-timer-label'>Time Remaining</div>
                         </div>
-                        {websitesList}
                         <button
                             className='focus-timer-stop-btn'
                             onClick={stopTimer}
                         >
                             Stop Timer
                         </button>
+                        <div className='focus-timer-breakline'></div>
+                        {websitesList}
                     </div>
                 </div>
             )
@@ -310,6 +317,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                 >
                     Start
                 </button>
+                <div className='focus-timer-breakline'></div>
                 {websitesList}
             </div>
         </div>
