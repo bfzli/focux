@@ -4,7 +4,7 @@ import '@/ui/styles/focux.css'
 import ReactDOM from 'react-dom/client'
 
 import { useState, useEffect, StrictMode } from 'react'
-import { Websites, Header, Tabs, Recommendations } from '@/ui/components'
+import { Websites, Header, Tabs, Recommendations, FocusTimer } from '@/ui/components'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <StrictMode>
@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 export default function Focux() {
     const [websites, setWebsites] = useState<Website[]>([])
     const [url, setUrl] = useState<string>('')
-    const [activeTab, setActiveTab] = useState<'blocklist' | 'recommendations'>(
+    const [activeTab, setActiveTab] = useState<'blocklist' | 'recommendations' | 'focustimer'>(
         'blocklist'
     )
 
@@ -151,6 +151,8 @@ export default function Focux() {
                     setWebsites={setWebsites}
                 />
             )}
+
+            {activeTab === 'focustimer' && <FocusTimer />}
         </>
     )
 }

@@ -1,6 +1,10 @@
 let scrollPreventers = []
 let mutedMediaElements = []
 let mediaObserver = null
+let originalTitle = null
+let originalFavicon = null
+let faviconLink = null
+let titleObserver = null
 
 function muteAllMedia() {
     const mediaElements = document.querySelectorAll('audio, video')
@@ -54,8 +58,120 @@ function restoreMediaVolume() {
     }
 }
 
-function injectBlockingOverlay() {
+function setBlockedFavicon() {
+    if (!originalFavicon) {
+        const existingFavicon = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')
+        if (existingFavicon) {
+            originalFavicon = existingFavicon.href
+        } else {
+            originalFavicon = ''
+        }
+    }
+
+    if (!faviconLink) {
+        faviconLink = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')
+        if (!faviconLink) {
+            faviconLink = document.createElement('link')
+            faviconLink.rel = 'icon'
+            document.head.appendChild(faviconLink)
+        }
+    }
+
+    const blockedFaviconSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23FF6B6B"/><path d="M50 20 L50 50 M30 50 L70 50" stroke="white" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="6"/></svg>'
+    faviconLink.href = blockedFaviconSvg
+    faviconLink.type = 'image/svg+xml'
+}
+
+function setBlockedTitle() {
+    if (originalTitle === null) {
+        originalTitle = document.title
+    }
+    document.title = `Focus Mode - ${originalTitle}`
+
+    if (!titleObserver) {
+        const titleElement = document.querySelector('title')
+        if (titleElement) {
+            titleObserver = new MutationObserver(() => {
+                if (originalTitle !== null) {
+                    const currentTitle = document.title
+                    if (!currentTitle.startsWith('Focus Mode - ')) {
+                        document.title = `Focus Mode - ${currentTitle}`
+                    }
+                }
+            })
+            titleObserver.observe(titleElement, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            })
+        }
+    }
+}
+
+function restoreFavicon() {
+    if (faviconLink && originalFavicon !== null) {
+        if (originalFavicon) {
+            faviconLink.href = originalFavicon
+        } else {
+            faviconLink.remove()
+            faviconLink = null
+        }
+    }
+}
+
+function restoreTitle() {
+    if (titleObserver) {
+        titleObserver.disconnect()
+        titleObserver = null
+    }
+    if (originalTitle !== null) {
+        document.title = originalTitle
+    }
+}
+
+function injectBlockingOverlay(isTimer = false, timerState = null) {
     if (document.getElementById('focux-overlay-2m31')) {
+        const description = document.getElementById('focux-description-2m31')
+        const timerDisplay = document.getElementById('focux-timer-display-2m31')
+            if (description) {
+                if (isTimer) {
+                    description.textContent = 'Can\'t access this tab because focus timer is enabled for the given period.'
+                } else {
+                    description.textContent = 'Can\'t access this tab because focus mode is enabled for this domain.'
+                }
+            }
+        if (timerDisplay && isTimer && timerState && timerState.endTime) {
+            const updateTimer = () => {
+                const remaining = Math.max(0, timerState.endTime - Date.now())
+                
+                if (remaining <= 0) {
+                    if (window.focuxTimerInterval) {
+                        clearInterval(window.focuxTimerInterval)
+                        window.focuxTimerInterval = null
+                    }
+                    checkAndUpdateBlocking()
+                    return
+                }
+                
+                const totalSeconds = Math.floor(remaining / 1000)
+                const hours = Math.floor(totalSeconds / 3600)
+                const minutes = Math.floor((totalSeconds % 3600) / 60)
+                const seconds = totalSeconds % 60
+                let timeStr
+                if (hours > 0) {
+                    timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                } else {
+                    timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
+                }
+                timerDisplay.textContent = timeStr
+            }
+            updateTimer()
+            const interval = setInterval(updateTimer, 1000)
+            if (window.focuxTimerInterval) {
+                clearInterval(window.focuxTimerInterval)
+            }
+            window.focuxTimerInterval = interval
+        }
         return
     }
 
@@ -135,12 +251,39 @@ function injectBlockingOverlay() {
             color: white !important;
             margin: 0 !important;
         }
+
+        .focux-timer-display {
+            font-size: 48px !important;
+            font-weight: 700 !important;
+            color: white !important;
+            margin: 0px 0 10px 0 !important;
+            font-variant-numeric: tabular-nums !important;
+            text-align: center !important;
+        }
     `
     document.head.appendChild(style)
 
     const overlay = document.createElement('div')
     overlay.id = 'focux-overlay-2m31'
     overlay.className = 'focux-wrapper'
+    let timerHtml = ''
+    if (isTimer && timerState && timerState.endTime) {
+        const remaining = Math.max(0, timerState.endTime - Date.now())
+        if (remaining > 0) {
+            const totalSeconds = Math.floor(remaining / 1000)
+            const hours = Math.floor(totalSeconds / 3600)
+            const minutes = Math.floor((totalSeconds % 3600) / 60)
+            const seconds = totalSeconds % 60
+            let timeStr
+            if (hours > 0) {
+                timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+            } else {
+                timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
+            }
+            timerHtml = `<div id="focux-timer-display-2m31" class="focux-timer-display">${timeStr}</div>`
+        }
+    }
+
     overlay.innerHTML = `
         <div class="focux-modal">
             <div class="focux-header">
@@ -173,12 +316,48 @@ function injectBlockingOverlay() {
                 </svg>
             </div>
             <div class="focux-breakline"></div>
-            <p class="focux-description">
-                Can't access this tab because focus mode is enabled for this
-                domain.
+            ${timerHtml}
+            <p class="focux-description" id="focux-description-2m31">
+                ${isTimer ? 'Can\'t access this tab because focus timer is enabled for the given period.' : 'Can\'t access this tab because focus mode is enabled for this domain.'}
             </p>
         </div>
     `
+
+    if (isTimer && timerState && timerState.endTime) {
+        const updateTimer = () => {
+            const timerDisplay = document.getElementById('focux-timer-display-2m31')
+            const remaining = Math.max(0, timerState.endTime - Date.now())
+            
+            if (remaining <= 0) {
+                if (window.focuxTimerInterval) {
+                    clearInterval(window.focuxTimerInterval)
+                    window.focuxTimerInterval = null
+                }
+                checkAndUpdateBlocking()
+                return
+            }
+            
+            if (timerDisplay) {
+                const totalSeconds = Math.floor(remaining / 1000)
+                const hours = Math.floor(totalSeconds / 3600)
+                const minutes = Math.floor((totalSeconds % 3600) / 60)
+                const seconds = totalSeconds % 60
+                let timeStr
+                if (hours > 0) {
+                    timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                } else {
+                    timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
+                }
+                timerDisplay.textContent = timeStr
+            }
+        }
+        updateTimer()
+        const interval = setInterval(updateTimer, 1000)
+        if (window.focuxTimerInterval) {
+            clearInterval(window.focuxTimerInterval)
+        }
+        window.focuxTimerInterval = interval
+    }
     document.body.appendChild(overlay)
 
     const preventScroll = function (e) {
@@ -213,11 +392,19 @@ function injectBlockingOverlay() {
     ]
 
     muteAllMedia()
+
+    setBlockedFavicon()
+    setBlockedTitle()
 }
 
 function removeBlockingOverlay() {
     const overlay = document.getElementById('focux-overlay-2m31')
     const style = document.getElementById('focux-style-2m31')
+
+    if (window.focuxTimerInterval) {
+        clearInterval(window.focuxTimerInterval)
+        window.focuxTimerInterval = null
+    }
 
     if (overlay) {
         overlay.remove()
@@ -233,36 +420,94 @@ function removeBlockingOverlay() {
     scrollPreventers = []
 
     restoreMediaVolume()
+
+    restoreFavicon()
+    restoreTitle()
 }
 
 function checkAndUpdateBlocking() {
-    chrome.storage.local.get('focux-websites-2m31', function (result) {
+    chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
         const blockedWebsites = result['focux-websites-2m31'] || []
+        const timerState = result['focux-timer-2m31']
         const currentUrl = window.location.href
         let shouldBlock = false
 
-        try {
-            const currentUrlObj = new URL(currentUrl)
-            let currentHostname = currentUrlObj.hostname
+        const invalidProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i
+        if (invalidProtocols.test(currentUrl)) {
+            return
+        }
 
-            currentHostname = currentHostname.replace(/^www\./, '')
+        if (!currentUrl.startsWith('http://') && !currentUrl.startsWith('https://')) {
+            return
+        }
 
-            for (const website of blockedWebsites) {
-                if (!website.active) continue
+        let isTimerBlocking = false
+        if (timerState && timerState.isActive && timerState.endTime) {
+            const remaining = timerState.endTime - Date.now()
+            if (remaining > 0) {
+                const whitelist = timerState.whitelist || []
+                let isWhitelisted = false
 
-                let blockedUrl = website.url
-                blockedUrl = blockedUrl.replace(/^www\./, '')
+                try {
+                    const currentUrlObj = new URL(currentUrl)
+                    let currentHostname = currentUrlObj.hostname
+                    currentHostname = currentHostname.replace(/^www\./, '')
 
-                if (currentHostname === blockedUrl) {
-                    shouldBlock = true
-                    break
+                    for (const site of whitelist) {
+                        let whitelistUrl = site.url
+                        whitelistUrl = whitelistUrl.replace(/^www\./, '')
+                        if (currentHostname === whitelistUrl) {
+                            isWhitelisted = true
+                            break
+                        }
+                    }
+                } catch (e) {
                 }
+
+                if (!isWhitelisted) {
+                    shouldBlock = true
+                    isTimerBlocking = true
+                }
+            } else {
+                const newState = {
+                    isActive: false,
+                    endTime: null,
+                    duration: null,
+                    whitelist: timerState.whitelist || []
+                }
+                chrome.storage.local.set({ 'focux-timer-2m31': newState }, () => {
+                    chrome.runtime.sendMessage({ action: 'broadcastUpdate' }).catch(() => {})
+                    setTimeout(() => {
+                        checkAndUpdateBlocking()
+                    }, 100)
+                })
             }
-        } catch (e) {
+        }
+
+        if (!shouldBlock) {
+            try {
+                const currentUrlObj = new URL(currentUrl)
+                let currentHostname = currentUrlObj.hostname
+
+                currentHostname = currentHostname.replace(/^www\./, '')
+
+                for (const website of blockedWebsites) {
+                    if (!website.active) continue
+
+                    let blockedUrl = website.url
+                    blockedUrl = blockedUrl.replace(/^www\./, '')
+
+                    if (currentHostname === blockedUrl) {
+                        shouldBlock = true
+                        break
+                    }
+                }
+            } catch (e) {
+            }
         }
 
         if (shouldBlock) {
-            injectBlockingOverlay()
+            injectBlockingOverlay(isTimerBlocking, timerState)
         } else {
             removeBlockingOverlay()
         }
@@ -278,7 +523,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 })
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && changes['focux-websites-2m31']) {
+    if (areaName === 'local' && (changes['focux-websites-2m31'] || changes['focux-timer-2m31'])) {
         checkAndUpdateBlocking()
     }
 })

@@ -2,16 +2,30 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
 
+html {
+    width: 300px;
+    min-height: 500px;
+    height: 500px;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #0a0b14 0%, #0f1a1f 100%);
+    background-attachment: fixed;
+}
+
 * {
     font-family: 'DM Sans', sans-serif;
 }
 
 body {
-    width: 300px;
-    height: 400px;
+    width: 100%;
+    min-height: 500px;
+    height: 500px;
     padding: 0.25em 0.75em 0.25em 0.75em;
-    background: #151622;
+    background: transparent;
     color: #fff;
+    overflow: hidden;
+    margin: 0;
+    box-sizing: border-box;
 }
 
 .delete-icon:hover {
@@ -115,12 +129,11 @@ a:hover {
     align-items: center;
     width: 100%;
     font-size: 1.5em;
-    display: flex;
     flex-direction: column;
     border-radius: 99px;
-    height: 100%;
+    flex: 1;
     text-align: center;
-    margin-top: -0.5em;
+    margin-top: 0;
 }
 
 .empty-text {
@@ -133,6 +146,10 @@ a:hover {
 
 #root {
     height: 100%;
+    min-height: 500px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
 }
 
 .error {
@@ -230,11 +247,11 @@ a:hover {
 .websites {
     display: flex;
     flex-direction: column;
-    padding-top: 1em;
-    height: auto;
-    padding-bottom: 0em;
-    overflow: scroll;
-    height: 100%;
+    padding-top: 0.5em;
+    flex: 1;
+    padding-bottom: 0.75em;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 button {
@@ -375,6 +392,7 @@ input {
     align-items: center;
     justify-content: space-between;
     gap: 0.75em;
+    margin-bottom: 0.5em;
 }
 
 .tabs {
@@ -453,11 +471,11 @@ input {
 .recommendations {
     display: flex;
     flex-direction: column;
-    padding-top: 1em;
-    height: auto;
-    padding-bottom: 0em;
-    overflow: scroll;
-    height: 100%;
+    padding-top: 0.5em;
+    flex: 1;
+    padding-bottom: 0.75em;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .recommendations-description {
@@ -528,4 +546,226 @@ input {
     background: #212331;
     border-color: #2c2e3e;
     color: #dfe0e0;
+}
+
+.focus-timer-container {
+    display: flex;
+    flex-direction: column;
+    padding-top: 0.5em;
+    flex: 1;
+    padding-bottom: 0em;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.focus-timer-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5em;
+}
+
+.focus-timer-title {
+    font-size: 1.1em;
+    color: #dfe0e0;
+    text-align: center;
+    margin-bottom: 0.5em;
+}
+
+.focus-timer-options {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.focus-timer-option {
+    padding: 0.5em 0.75em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+    color: #dfe0e0;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+}
+
+.focus-timer-option:hover {
+    background: #2c2e3e;
+    border-color: #fff;
+}
+
+.focus-timer-option-selected {
+    background: #2a2d3f;
+    border-color: #fff;
+    color: #fff;
+}
+
+.focus-timer-start-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    color: #dfe0e0;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1em;
+    padding: 0;
+}
+
+.focus-timer-start-btn:hover {
+    background: #2c2e3e;
+    border-color: #fff;
+    transform: scale(1.05);
+}
+
+.focus-timer-active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5em;
+    padding: 1em 0;
+}
+
+.focus-timer-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.focus-timer-time {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+.focus-timer-label {
+    font-size: 0.9em;
+    color: #7f839f;
+}
+
+.focus-timer-stop-btn {
+    padding: 0.75em 1.5em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+    color: #dfe0e0;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    width: 100%;
+}
+
+.focus-timer-stop-btn:hover {
+    background: #2c2e3e;
+    border-color: #fff;
+}
+
+.focus-timer-whitelist-section {
+    width: 100%;
+    margin-top: 1em;
+}
+
+.focus-timer-whitelist-label {
+    font-size: 0.85em;
+    color: #7f839f;
+    margin-bottom: 0.5em;
+}
+
+.focus-timer-whitelist-input {
+    display: flex;
+    gap: 0.5em;
+    margin-bottom: 0.75em;
+}
+
+.focus-timer-whitelist-input-field {
+    flex: 1;
+    padding: 0.5em 0.75em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+    color: #dfe0e0;
+    font-size: 0.9em;
+    outline: none;
+}
+
+.focus-timer-whitelist-input-field:focus {
+    border-color: #fff;
+}
+
+.focus-timer-whitelist-input-field::placeholder {
+    color: #7f839f;
+}
+
+.focus-timer-whitelist-add {
+    padding: 0.5em 0.75em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+    color: #dfe0e0;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.focus-timer-whitelist-add:hover {
+    background: #2c2e3e;
+    border-color: #fff;
+}
+
+.focus-timer-whitelist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.focus-timer-whitelist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5em 0.75em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+    font-size: 0.85em;
+    color: #dfe0e0;
+}
+
+.focus-timer-whitelist-remove {
+    background: transparent;
+    border: none;
+    color: #7f839f;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease-in-out;
+    line-height: 1;
+}
+
+.focus-timer-whitelist-remove:hover {
+    color: #fff;
 }

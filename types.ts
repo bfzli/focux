@@ -33,8 +33,8 @@ export interface WebsitesProps {
 }
 
 export interface TabsProps {
-    activeTab: 'blocklist' | 'recommendations'
-    onTabChange: (tab: 'blocklist' | 'recommendations') => void
+    activeTab: 'blocklist' | 'recommendations' | 'focustimer'
+    onTabChange: (tab: 'blocklist' | 'recommendations' | 'focustimer') => void
 }
 
 export interface RecommendationsProps {

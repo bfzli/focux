@@ -17,7 +17,13 @@ export default function Tabs({
                     className={`tab ${activeTab === 'recommendations' ? 'tab-active' : 'tab-inactive'}`}
                     onClick={() => onTabChange('recommendations')}
                 >
-                    Recommendations
+                    Popular
+                </button>
+                <button
+                    className={`tab ${activeTab === 'focustimer' ? 'tab-active' : 'tab-inactive'}`}
+                    onClick={() => onTabChange('focustimer')}
+                >
+                    Timer
                 </button>
             </div>
         </div>

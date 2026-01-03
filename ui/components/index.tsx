@@ -5,5 +5,6 @@ import Website from '@/ui/components/Website'
 import Websites from '@/ui/components/Websites'
 import Tabs from '@/ui/components/Tabs'
 import Recommendations from '@/ui/components/Recommendations'
+import FocusTimer from '@/ui/components/FocusTimer'
 
-export { Empty, Header, Input, Website, Websites, Tabs, Recommendations }
+export { Empty, Header, Input, Website, Websites, Tabs, Recommendations, FocusTimer }
