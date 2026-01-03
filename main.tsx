@@ -3,7 +3,7 @@ import type { Website } from '@/types'
 import '@/ui/styles/focux.css'
 import ReactDOM from 'react-dom/client'
 
-import { useState, useEffect, StrictMode } from 'react'
+import { useState, useEffect, StrictMode, useRef } from 'react'
 import { Websites, Header, Tabs, Recommendations, FocusTimer } from '@/ui/components'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -18,6 +18,7 @@ export default function Focux() {
     const [activeTab, setActiveTab] = useState<'blocklist' | 'recommendations' | 'focustimer'>(
         'blocklist'
     )
+    const isInitialLoad = useRef(true)
 
     const isValidDomain = (formattedUrl: string): boolean => {
         try {
@@ -48,6 +49,7 @@ export default function Focux() {
             chrome.storage.local.get(['focux-websites-2m31'], (result) => {
                 const storedWebsites = (result['focux-websites-2m31'] ||
                     []) as Website[]
+                isInitialLoad.current = true
                 setWebsites(storedWebsites)
 
                 chrome.tabs.query(
@@ -110,12 +112,18 @@ export default function Focux() {
             const websites = localStorage.getItem('focux-websites-2m31')
             if (websites) {
                 const storedWebsites = JSON.parse(websites) as Website[]
+                isInitialLoad.current = true
                 setWebsites(storedWebsites)
             }
         }
     }, [])
 
     useEffect(() => {
+        if (isInitialLoad.current) {
+            isInitialLoad.current = false
+            return
+        }
+
         const isProd = chrome?.storage
 
         if (isProd !== undefined)

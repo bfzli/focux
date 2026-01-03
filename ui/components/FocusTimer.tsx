@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Website } from '@/types'
 import { EmptyIcon } from '@/ui/icons'
 
@@ -23,6 +23,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
     })
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedDuration, setSelectedDuration] = useState<number | null>(10)
+    const isInitialLoad = useRef(true)
 
     const durations = [
         { label: '5 min', minutes: 5 },
@@ -46,6 +47,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                         ...stored,
                         whitelist: cleanedWhitelist
                     }
+                    isInitialLoad.current = true
                     setTimerState(finalState)
                     if (stored.isActive && stored.endTime) {
                         const remaining = Math.max(0, stored.endTime - Date.now())
@@ -64,6 +66,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                     ...parsed,
                     whitelist: cleanedWhitelist
                 }
+                isInitialLoad.current = true
                 setTimerState(finalState)
                 if (parsed.isActive && parsed.endTime) {
                     const remaining = Math.max(0, parsed.endTime - Date.now())
@@ -119,6 +122,11 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
     }, [timerState.isActive, timerState.endTime])
 
     useEffect(() => {
+        if (isInitialLoad.current) {
+            isInitialLoad.current = false
+            return
+        }
+
         const isProd = chrome?.storage
 
         if (isProd !== undefined) {
