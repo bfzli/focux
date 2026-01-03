@@ -1,4 +1,58 @@
 let scrollPreventers = []
+let mutedMediaElements = []
+let mediaObserver = null
+
+function muteAllMedia() {
+    const mediaElements = document.querySelectorAll('audio, video')
+    mediaElements.forEach((element) => {
+        if (!mutedMediaElements.find((m) => m.element === element)) {
+            mutedMediaElements.push({
+                element: element,
+                originalVolume: element.volume,
+                wasMuted: element.muted
+            })
+            element.volume = 0
+            element.muted = true
+        }
+    })
+
+    if (!mediaObserver) {
+        mediaObserver = new MutationObserver(() => {
+            const newMediaElements = document.querySelectorAll('audio, video')
+            newMediaElements.forEach((element) => {
+                if (!mutedMediaElements.find((m) => m.element === element)) {
+                    mutedMediaElements.push({
+                        element: element,
+                        originalVolume: element.volume,
+                        wasMuted: element.muted
+                    })
+                    element.volume = 0
+                    element.muted = true
+                }
+            })
+        })
+
+        mediaObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        })
+    }
+}
+
+function restoreMediaVolume() {
+    mutedMediaElements.forEach(({ element, originalVolume, wasMuted }) => {
+        if (element && element.parentNode) {
+            element.volume = originalVolume
+            element.muted = wasMuted
+        }
+    })
+    mutedMediaElements = []
+
+    if (mediaObserver) {
+        mediaObserver.disconnect()
+        mediaObserver = null
+    }
+}
 
 function injectBlockingOverlay() {
     if (document.getElementById('focux-overlay-2m31')) {
@@ -59,6 +113,8 @@ function injectBlockingOverlay() {
                     { type: 'touchmove', handler: preventScroll },
                     { type: 'keydown', handler: preventKeyScroll }
                 ]
+
+                muteAllMedia()
             }
         }
     }
@@ -82,6 +138,8 @@ function removeBlockingOverlay() {
         document.removeEventListener(type, handler)
     })
     scrollPreventers = []
+
+    restoreMediaVolume()
 }
 
 function checkAndUpdateBlocking() {
