@@ -5,7 +5,7 @@ export default function EmptyIcon() {
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth="1.5px"
-      stroke="#7f839f"
+      stroke="#dfe0e0"
       width="28px"
     >
       <path

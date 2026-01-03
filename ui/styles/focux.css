@@ -104,10 +104,10 @@ a {
   align-items: center;
   width: 100%;
   font-size: 1.5em;
-  padding: 5em 0em 4em 0em;
   display: flex;
   flex-direction: column;
   border-radius: 99px;
+  height: 100%;
   text-align: center;
   margin-top: -0.5em;
 }
@@ -115,8 +115,13 @@ a {
 .empty-text {
   width: 65%;
   font-size: 0.75em;
-  color: #7f839f;
+  color: #dfe0e0;
+  margin-top: 0.75em;
   margin-left: 0.5em;
+}
+
+#root {
+    height: 100%;
 }
 
 .error {
@@ -219,6 +224,7 @@ a {
   height: auto;
   padding-bottom: 0em;
   overflow: scroll;
+  height: 100%;
 }
 
 button {
