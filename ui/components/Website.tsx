@@ -49,17 +49,15 @@ export default function Website({ website, websites, setWebsites, isLast }: Webs
       </div>
 
       <div className="website-opearation">
-        {website?.active && (
-          <span className="label-active label" onClick={onActivate}>
-            Focusing
-          </span>
-        )}
-
-        {!website?.active && (
-          <span className="label-inactive label" onClick={onActivate}>
-            Not Focusing
-          </span>
-        )}
+        <label className="inline-flex items-center cursor-pointer mr-2 flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={website?.active || false}
+            onChange={onActivate}
+            className="sr-only peer"
+          />
+          <div className="relative w-8 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[17px] after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-white peer-checked:after:bg-[#212331]"></div>
+        </label>
 
         <DeleteIcon onClick={onDelete} />
       </div>

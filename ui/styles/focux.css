@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
 
 * {
@@ -6,9 +8,8 @@
 
 body {
   width: 300px;
-  min-height: 420px;
-  max-height: 620px;
-  padding: 0.15em 0.5em 0.15em 0.5em;
+  height: 500px;
+  padding: 0.25em 0.75em 0.25em 0.75em;
   background: #151622;
   color: #fff;
 }
@@ -45,6 +46,7 @@ body {
 
 .website-opearation{
   display: flex;
+  align-items: center;
 }
 
 .donate {
