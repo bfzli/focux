@@ -34,6 +34,11 @@ body {
     justify-content: space-between;
 }
 
+.website-current {
+    border: 1px solid #fff;
+    background: #2a2d3f;
+}
+
 .website-info {
     display: flex;
     align-items: center;

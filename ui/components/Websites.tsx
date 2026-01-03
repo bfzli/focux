@@ -7,6 +7,12 @@ export default function Websites({
     url,
     setUrl
 }: WebsitesProps) {
+    const sortedWebsites = [...websites].sort((a, b) => {
+        if (url && a.url === url) return -1
+        if (url && b.url === url) return 1
+        return 0
+    })
+
     return (
         <div className='websites'>
             <Input
@@ -16,18 +22,19 @@ export default function Websites({
                 websites={websites}
             />
 
-            {websites.length !== 0 &&
-                websites.map((website, index) => (
+            {sortedWebsites.length !== 0 &&
+                sortedWebsites.map((website, index) => (
                     <Website
                         key={website.id}
                         website={website}
                         setWebsites={setWebsites}
                         websites={websites}
-                        isLast={index === websites.length - 1}
+                        isLast={index === sortedWebsites.length - 1}
+                        isCurrent={url === website.url}
                     />
                 ))}
 
-            {websites.length === 0 && <Empty />}
+            {sortedWebsites.length === 0 && <Empty />}
         </div>
     )
 }

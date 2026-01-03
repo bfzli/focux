@@ -6,7 +6,8 @@ export default function Website({
     website,
     websites,
     setWebsites,
-    isLast
+    isLast,
+    isCurrent
 }: WebsiteProps) {
     const [favicon, setFavicon] = useState<string | null>(null)
 
@@ -52,7 +53,7 @@ export default function Website({
 
     return (
         <div
-            className='website'
+            className={`website ${isCurrent ? 'website-current' : ''}`}
             style={isLast ? { marginBottom: 0 } : undefined}
         >
             <div className='website-info'>
@@ -69,9 +70,9 @@ export default function Website({
                 <div className='websiteText'>
                     <span className='entry'>https://</span>
                     <span className='url'>
-                        {website?.url?.length < 18
-                            ? website?.url
-                            : website?.url?.substring(0, 18) + '...'}
+                        {website?.url?.trim()?.length < 15
+                            ? website?.url?.trim()
+                            : website?.url?.trim()?.substring(0, 15) + '...'}
                     </span>
                 </div>
             </div>

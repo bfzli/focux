@@ -20,6 +20,7 @@ export interface WebsiteProps {
         websites: Website[] | ((prev: Website[]) => Website[])
     ) => void
     isLast?: boolean
+    isCurrent?: boolean
 }
 
 export interface WebsitesProps {
