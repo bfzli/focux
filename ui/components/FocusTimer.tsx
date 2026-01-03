@@ -5,10 +5,15 @@ interface TimerState {
     isActive: boolean
     endTime: number | null
     duration: number | null
-    whitelist: Website[]
+    whitelist: string[]
 }
 
-export default function FocusTimer() {
+interface FocusTimerProps {
+    websites: Website[]
+    setWebsites?: (websites: Website[] | ((prev: Website[]) => Website[])) => void
+}
+
+export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
     const [timerState, setTimerState] = useState<TimerState>({
         isActive: false,
         endTime: null,
@@ -17,7 +22,6 @@ export default function FocusTimer() {
     })
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedDuration, setSelectedDuration] = useState<number | null>(10)
-    const [whitelistUrl, setWhitelistUrl] = useState<string>('')
 
     const durations = [
         { label: '5 min', minutes: 5 },
@@ -34,7 +38,14 @@ export default function FocusTimer() {
             chrome.storage.local.get(['focux-timer-2m31'], (result) => {
                 const stored = result['focux-timer-2m31'] as TimerState | undefined
                 if (stored) {
-                    setTimerState(stored)
+                    const cleanedWhitelist = stored.whitelist.filter((id) =>
+                        websites.some((w) => w.id === id)
+                    )
+                    const finalState = {
+                        ...stored,
+                        whitelist: cleanedWhitelist
+                    }
+                    setTimerState(finalState)
                     if (stored.isActive && stored.endTime) {
                         const remaining = Math.max(0, stored.endTime - Date.now())
                         setTimeLeft(remaining)
@@ -45,7 +56,14 @@ export default function FocusTimer() {
             const stored = localStorage.getItem('focux-timer-2m31')
             if (stored) {
                 const parsed = JSON.parse(stored) as TimerState
-                setTimerState(parsed)
+                const cleanedWhitelist = parsed.whitelist.filter((id) =>
+                    websites.some((w) => w.id === id)
+                )
+                const finalState = {
+                    ...parsed,
+                    whitelist: cleanedWhitelist
+                }
+                setTimerState(finalState)
                 if (parsed.isActive && parsed.endTime) {
                     const remaining = Math.max(0, parsed.endTime - Date.now())
                     setTimeLeft(remaining)
@@ -53,6 +71,18 @@ export default function FocusTimer() {
             }
         }
     }, [])
+
+    useEffect(() => {
+        const cleanedWhitelist = timerState.whitelist.filter((id) =>
+            websites.some((w) => w.id === id)
+        )
+        if (cleanedWhitelist.length !== timerState.whitelist.length) {
+            setTimerState({
+                ...timerState,
+                whitelist: cleanedWhitelist
+            })
+        }
+    }, [websites])
 
     useEffect(() => {
         if (timerState.isActive && timerState.endTime) {
@@ -148,64 +178,85 @@ export default function FocusTimer() {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`
     }
 
-    const isValidDomain = (formattedUrl: string): boolean => {
-        try {
-            if (!formattedUrl || formattedUrl.trim() === '') return false
-
-            const specialProtocols =
-                /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i
-            if (specialProtocols.test(formattedUrl)) return false
-
-            if (formattedUrl.includes(':')) return false
-
-            const regex = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i
-            if (!regex.test(formattedUrl)) return false
-
-            let formattedNew = formattedUrl.replace(/^(https?:\/\/)/, '')
-            if (!formattedNew.includes('.')) return false
-
-            return Boolean(new URL(`https://${formattedNew}`))
-        } catch (e) {
-            return false
-        }
-    }
-
-    const addToWhitelist = () => {
-        let formattedUrl = whitelistUrl
-        formattedUrl = formattedUrl.replace(/^(https?:\/\/)/, '')
-        formattedUrl = formattedUrl.replace(/^www\./, '')
-        formattedUrl = formattedUrl.replace(/\/.*$/, '')
-
-        if (!isValidDomain(formattedUrl)) return
-
-        const exists = timerState.whitelist.find((w) => {
-            const normalizedStoredUrl = w.url.replace(/^www\./, '')
-            return normalizedStoredUrl === formattedUrl
-        })
-
-        if (exists) return
-
-        const newWebsite: Website = {
-            id: Math.random().toString(36).substring(2, 6),
-            url: formattedUrl,
-            active: true
-        }
-
-        const updatedWhitelist = [...timerState.whitelist, newWebsite]
-        setTimerState({
-            ...timerState,
-            whitelist: updatedWhitelist
-        })
-        setWhitelistUrl('')
-    }
-
-    const removeFromWhitelist = (id: string) => {
-        const updatedWhitelist = timerState.whitelist.filter((w) => w.id !== id)
+    const toggleWhitelist = (websiteId: string) => {
+        const isWhitelisted = timerState.whitelist.includes(websiteId)
+        const updatedWhitelist = isWhitelisted
+            ? timerState.whitelist.filter((id) => id !== websiteId)
+            : [...timerState.whitelist, websiteId]
         setTimerState({
             ...timerState,
             whitelist: updatedWhitelist
         })
     }
+
+    const WhitelistWebsiteItem = ({ website, isWhitelisted, onToggle, isLast }: { website: Website; isWhitelisted: boolean; onToggle: () => void; isLast: boolean }) => {
+        const [favicon, setFavicon] = useState<string | null>(null)
+        const onError = () => {
+            const example = `https://www.google.com/s2/favicons?domain=https://example.com`
+            setFavicon(example)
+        }
+        return (
+            <div
+                className='focus-timer-website-item'
+                style={isLast ? { marginBottom: 0 } : undefined}
+            >
+                <div className='website-info'>
+                    <img
+                        src={
+                            favicon !== null
+                                ? favicon
+                                : `https://www.google.com/s2/favicons?domain=${website?.url}`
+                        }
+                        onError={onError}
+                        alt='website favicon'
+                        className='favicon'
+                    />
+                    <div className='websiteText'>
+                        <span className='entry'>https://</span>
+                        <span className='url'>
+                            {website?.url?.trim()?.length < 15
+                                ? website?.url?.trim()
+                                : website?.url?.trim()?.substring(0, 15) + '...'}
+                        </span>
+                    </div>
+                </div>
+                <label className='focus-timer-whitelist-toggle'>
+                    <input
+                        type='checkbox'
+                        checked={isWhitelisted}
+                        onChange={onToggle}
+                        className='sr-only peer'
+                    />
+                    <div className="relative w-8 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[17px] after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-white peer-checked:after:bg-[#212331]"></div>
+                </label>
+            </div>
+        )
+    }
+
+    const websitesList = (
+        <div className='focus-timer-websites'>
+            <div className='focus-timer-websites-title'>Select Whitelist Sites</div>
+            <div className='websites'>
+                {websites.length === 0 ? (
+                    <div className='empty'>
+                        <div className='empty-text'>
+                            No websites in the focus list. Add one in Blocked Sites tab.
+                        </div>
+                    </div>
+                ) : (
+                    websites.map((website, index) => (
+                        <WhitelistWebsiteItem
+                            key={website.id}
+                            website={website}
+                            isWhitelisted={timerState.whitelist.includes(website.id)}
+                            onToggle={() => toggleWhitelist(website.id)}
+                            isLast={index === websites.length - 1}
+                        />
+                    ))
+                )}
+            </div>
+        </div>
+    )
 
     if (timerState.isActive && timerState.endTime) {
         const displayTime = timeLeft > 0 ? timeLeft : Math.max(0, timerState.endTime - Date.now())
@@ -217,24 +268,7 @@ export default function FocusTimer() {
                             <div className='focus-timer-time'>{formatTime(displayTime)}</div>
                             <div className='focus-timer-label'>Time Remaining</div>
                         </div>
-                        {timerState.whitelist.length > 0 && (
-                            <div className='focus-timer-whitelist'>
-                                <div className='focus-timer-whitelist-title'>Whitelisted Sites</div>
-                                <div className='focus-timer-whitelist-items'>
-                                    {timerState.whitelist.map((site) => (
-                                        <div key={site.id} className='focus-timer-whitelist-item'>
-                                            <span>{site.url}</span>
-                                            <button
-                                                className='focus-timer-whitelist-remove'
-                                                onClick={() => removeFromWhitelist(site.id)}
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        {websitesList}
                         <button
                             className='focus-timer-stop-btn'
                             onClick={stopTimer}
@@ -266,44 +300,6 @@ export default function FocusTimer() {
                         </button>
                     ))}
                 </div>
-                <div className='focus-timer-whitelist-section'>
-                    <div className='focus-timer-whitelist-label'>Whitelist (optional)</div>
-                    <div className='focus-timer-whitelist-input'>
-                        <input
-                            type='text'
-                            placeholder='example.com'
-                            value={whitelistUrl}
-                            onChange={(e) => setWhitelistUrl(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    addToWhitelist()
-                                }
-                            }}
-                            className='focus-timer-whitelist-input-field'
-                        />
-                        <button
-                            className='focus-timer-whitelist-add'
-                            onClick={addToWhitelist}
-                        >
-                            +
-                        </button>
-                    </div>
-                    {timerState.whitelist.length > 0 && (
-                        <div className='focus-timer-whitelist-items'>
-                            {timerState.whitelist.map((site) => (
-                                <div key={site.id} className='focus-timer-whitelist-item'>
-                                    <span>{site.url}</span>
-                                    <button
-                                        className='focus-timer-whitelist-remove'
-                                        onClick={() => removeFromWhitelist(site.id)}
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
                 <button
                     className='focus-timer-start-btn'
                     onClick={() => {
@@ -314,8 +310,8 @@ export default function FocusTimer() {
                 >
                     Start
                 </button>
+                {websitesList}
             </div>
         </div>
     )
 }
-

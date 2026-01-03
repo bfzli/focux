@@ -561,15 +561,16 @@ input {
 .focus-timer-selection {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 1.5em;
+    align-items: flex-start;
+    gap: 0.5em;
+    padding-bottom: 1rem;
+    width: 100%;
 }
 
 .focus-timer-title {
-    font-size: 1.1em;
-    color: #dfe0e0;
-    text-align: center;
-    margin-bottom: 0.5em;
+    font-size: 0.9em;
+    color: #7f839f;
+    margin-bottom: 0em;
 }
 
 .focus-timer-options {
@@ -578,7 +579,7 @@ input {
     gap: 0.5em;
     width: 100%;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .focus-timer-option {
@@ -621,7 +622,10 @@ input {
     align-items: center;
     justify-content: center;
     margin-top: 1em;
+    margin-bottom: 1rem;
     padding: 0;
+    text-align: center;
+    align-self: center;
 }
 
 .focus-timer-start-btn:hover {
@@ -635,7 +639,21 @@ input {
     flex-direction: column;
     align-items: center;
     gap: 1.5em;
-    padding: 1em 0;
+    padding: 1em 0 1rem 0;
+    width: 100%;
+}
+
+.focus-timer-active .focus-timer-display {
+    order: 1;
+}
+
+.focus-timer-active .focus-timer-websites {
+    order: 2;
+    width: 100%;
+}
+
+.focus-timer-active .focus-timer-stop-btn {
+    order: 3;
 }
 
 .focus-timer-display {
@@ -679,93 +697,40 @@ input {
     margin-top: 1em;
 }
 
-.focus-timer-whitelist-label {
-    font-size: 0.85em;
-    color: #7f839f;
-    margin-bottom: 0.5em;
+.focus-timer-websites {
+    width: 100%;
+    margin-top: 1em;
 }
 
-.focus-timer-whitelist-input {
-    display: flex;
-    gap: 0.5em;
-    margin-bottom: 0.75em;
-}
-
-.focus-timer-whitelist-input-field {
-    flex: 1;
-    padding: 0.5em 0.75em;
-    border: 1px solid #2c2e3e;
-    background: #212331;
-    border-radius: 0.5em;
-    color: #dfe0e0;
+.focus-timer-websites-title {
     font-size: 0.9em;
-    outline: none;
-}
-
-.focus-timer-whitelist-input-field:focus {
-    border-color: #fff;
-}
-
-.focus-timer-whitelist-input-field::placeholder {
     color: #7f839f;
 }
 
-.focus-timer-whitelist-add {
-    padding: 0.5em 0.75em;
-    border: 1px solid #2c2e3e;
-    background: #212331;
-    border-radius: 0.5em;
-    color: #dfe0e0;
-    font-size: 1.2em;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out;
-    width: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.focus-timer-whitelist-add:hover {
-    background: #2c2e3e;
-    border-color: #fff;
-}
-
-.focus-timer-whitelist-items {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5em;
-    max-height: 120px;
-    overflow-y: auto;
-}
-
-.focus-timer-whitelist-item {
+.focus-timer-website-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5em 0.75em;
+    padding: 0.6em 0.75em;
+    font-size: 0.925em;
     border: 1px solid #2c2e3e;
     background: #212331;
     border-radius: 0.5em;
-    font-size: 0.85em;
-    color: #dfe0e0;
+    margin-bottom: 0.5em;
+    cursor: default;
+    user-select: none;
 }
 
-.focus-timer-whitelist-remove {
-    background: transparent;
-    border: none;
-    color: #7f839f;
-    font-size: 1.5em;
-    cursor: pointer;
-    padding: 0;
-    width: 24px;
-    height: 24px;
+.focus-timer-website-item .website-info {
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease-in-out;
-    line-height: 1;
+    flex: 1;
 }
 
-.focus-timer-whitelist-remove:hover {
-    color: #fff;
+.focus-timer-whitelist-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 0.5em;
 }

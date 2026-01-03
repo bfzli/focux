@@ -429,6 +429,20 @@ function checkAndUpdateBlocking() {
     chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
         const blockedWebsites = result['focux-websites-2m31'] || []
         const timerState = result['focux-timer-2m31']
+        
+        if (timerState && timerState.whitelist) {
+            const cleanedWhitelist = timerState.whitelist.filter((id) =>
+                blockedWebsites.some((w) => w.id === id)
+            )
+            if (cleanedWhitelist.length !== timerState.whitelist.length) {
+                chrome.storage.local.set({
+                    'focux-timer-2m31': {
+                        ...timerState,
+                        whitelist: cleanedWhitelist
+                    }
+                })
+            }
+        }
         const currentUrl = window.location.href
         let shouldBlock = false
 
@@ -445,23 +459,27 @@ function checkAndUpdateBlocking() {
         if (timerState && timerState.isActive && timerState.endTime) {
             const remaining = timerState.endTime - Date.now()
             if (remaining > 0) {
-                const whitelist = timerState.whitelist || []
+                const whitelistIds = timerState.whitelist || []
                 let isWhitelisted = false
 
-                try {
-                    const currentUrlObj = new URL(currentUrl)
-                    let currentHostname = currentUrlObj.hostname
-                    currentHostname = currentHostname.replace(/^www\./, '')
+                if (whitelistIds.length > 0) {
+                    try {
+                        const currentUrlObj = new URL(currentUrl)
+                        let currentHostname = currentUrlObj.hostname
+                        currentHostname = currentHostname.replace(/^www\./, '')
 
-                    for (const site of whitelist) {
-                        let whitelistUrl = site.url
-                        whitelistUrl = whitelistUrl.replace(/^www\./, '')
-                        if (currentHostname === whitelistUrl) {
-                            isWhitelisted = true
-                            break
+                        for (const website of blockedWebsites) {
+                            if (whitelistIds.includes(website.id)) {
+                                let whitelistUrl = website.url
+                                whitelistUrl = whitelistUrl.replace(/^www\./, '')
+                                if (currentHostname === whitelistUrl) {
+                                    isWhitelisted = true
+                                    break
+                                }
+                            }
                         }
+                    } catch (e) {
                     }
-                } catch (e) {
                 }
 
                 if (!isWhitelisted) {

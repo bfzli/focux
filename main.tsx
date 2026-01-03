@@ -152,7 +152,12 @@ export default function Focux() {
                 />
             )}
 
-            {activeTab === 'focustimer' && <FocusTimer />}
+            {activeTab === 'focustimer' && (
+                <FocusTimer
+                    websites={websites}
+                    setWebsites={setWebsites}
+                />
+            )}
         </>
     )
 }
