@@ -4,5 +4,7 @@ import End from "@/ui/components/End";
 import Input from "@/ui/components/Input";
 import Website from "@/ui/components/Website";
 import Websites from "@/ui/components/Websites";
+import Tabs from "@/ui/components/Tabs";
+import Recommendations from "@/ui/components/Recommendations";
 
-export { Empty, Header, End, Input, Website, Websites };
+export { Empty, Header, End, Input, Website, Websites, Tabs, Recommendations };

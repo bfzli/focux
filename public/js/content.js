@@ -82,12 +82,26 @@ function checkAndUpdateBlocking() {
     const currentUrl = window.location.href;
     let shouldBlock = false;
 
-    for (const website of blockedWebsites) {
-      if (currentUrl.includes(website.url) && website.active) {
-        shouldBlock = true;
-        console.log("[Focux] Matched blocked site:", website.url, "active:", website.active);
-        break;
+    try {
+      const currentUrlObj = new URL(currentUrl);
+      let currentHostname = currentUrlObj.hostname;
+      
+      currentHostname = currentHostname.replace(/^www\./, "");
+
+      for (const website of blockedWebsites) {
+        if (!website.active) continue;
+        
+        let blockedUrl = website.url;
+        blockedUrl = blockedUrl.replace(/^www\./, "");
+        
+        if (currentHostname === blockedUrl) {
+          shouldBlock = true;
+          console.log("[Focux] Matched blocked site:", website.url, "active:", website.active);
+          break;
+        }
       }
+    } catch (e) {
+      console.log("[Focux] Error parsing URL:", currentUrl, e);
     }
 
     console.log("[Focux] Should block:", shouldBlock, "Current URL:", currentUrl);

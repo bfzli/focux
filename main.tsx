@@ -1,7 +1,7 @@
 import "@/ui/styles/focux.css";
 import ReactDOM from "react-dom/client";
 import { useState, useEffect, StrictMode } from "react";
-import { Websites, End, Header } from "@/ui/components";
+import { Websites, End, Header, Tabs, Recommendations } from "@/ui/components";
 import type { Website } from "@/types";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -13,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 export default function Focux() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [url, setUrl] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"blocklist" | "recommendations">("blocklist");
 
   const isValidDomain = (formattedUrl: string): boolean => {
     try {
@@ -98,12 +99,23 @@ export default function Focux() {
     <>
       <Header />
 
-      <Websites 
-        websites={websites} 
-        setWebsites={setWebsites}
-        url={url}
-        setUrl={setUrl}
-      />
+      <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === "blocklist" && (
+        <Websites 
+          websites={websites} 
+          setWebsites={setWebsites}
+          url={url}
+          setUrl={setUrl}
+        />
+      )}
+
+      {activeTab === "recommendations" && (
+        <Recommendations 
+          websites={websites} 
+          setWebsites={setWebsites}
+        />
+      )}
     </>
   );
 }

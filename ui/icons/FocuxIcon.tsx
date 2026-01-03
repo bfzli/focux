@@ -1,7 +1,7 @@
 export default function FocuxIcon() {
   return (
     <svg
-      width="86"
+      width="74"
       viewBox="0 0 210 68"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
