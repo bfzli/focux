@@ -53,7 +53,12 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                         const remaining = Math.max(0, stored.endTime - Date.now())
                         setTimeLeft(remaining)
                     }
+                } else {
+                    isInitialLoad.current = false
                 }
+                setTimeout(() => {
+                    isInitialLoad.current = false
+                }, 50)
             })
         } else {
             const stored = localStorage.getItem('focux-timer-2m31')
@@ -72,7 +77,12 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                     const remaining = Math.max(0, parsed.endTime - Date.now())
                     setTimeLeft(remaining)
                 }
+            } else {
+                isInitialLoad.current = false
             }
+            setTimeout(() => {
+                isInitialLoad.current = false
+            }, 50)
         }
     }, [])
 
@@ -148,6 +158,7 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
             duration: minutes,
             whitelist: timerState.whitelist
         }
+        isInitialLoad.current = false
         setTimerState(newState)
         setTimeLeft(minutes * 60 * 1000)
     }

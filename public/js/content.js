@@ -5,6 +5,7 @@ let originalTitle = null
 let originalFavicon = null
 let faviconLink = null
 let titleObserver = null
+let faviconTimeout = null
 
 function isExtensionContextValid() {
     try {
@@ -13,7 +14,9 @@ function isExtensionContextValid() {
         }
         const id = chrome.runtime.id
         return id !== undefined && id !== null
-    } catch (e) {
+    } 
+    
+    catch (e) {
         return false
     }
 }
@@ -21,13 +24,16 @@ function isExtensionContextValid() {
 function hasChromeError() {
     try {
         return chrome.runtime.lastError !== undefined && chrome.runtime.lastError !== null
-    } catch (e) {
+    } 
+    
+    catch (e) {
         return true
     }
 }
 
 function muteAllMedia() {
     const mediaElements = document.querySelectorAll('audio, video')
+    
     mediaElements.forEach((element) => {
         if (!mutedMediaElements.find((m) => m.element === element)) {
             mutedMediaElements.push({
@@ -97,9 +103,110 @@ function setBlockedFavicon() {
         }
     }
 
-    const blockedFaviconSvg = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23FF6B6B"/><path d="M50 20 L50 50 M30 50 L70 50" stroke="white" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="6"/></svg>'
+    const svgString = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M3.23641 2.832C5.02568 1.12369 7.4553 0.12654 9.91778 0.00253282C10.7606 0.00253282 11.6058 0.00759429 12.4486 0C12.4056 0.903506 12.4486 1.80956 12.4233 2.71303C12.3044 4.73263 11.5578 6.70667 10.2999 8.29097C8.66503 10.422 6.16457 11.8518 3.50974 12.2214C2.35062 12.4086 1.17378 12.2897 0.00707354 12.3226C0.0273202 11.328 -0.0359505 10.3308 0.0425053 9.33874C0.270279 6.87879 1.43193 4.52259 3.23641 2.832Z" fill="#1D3540"/><path d="M11.5156 0C12.4191 0.0101229 13.3227 -0.00506151 14.2287 0.00506134C16.4837 0.164503 18.7083 1.03005 20.4064 2.53084C22.2792 4.1379 23.5624 6.4359 23.8914 8.8908C24.0357 10.0296 23.9445 11.1812 24.0002 12.3251C23.2106 12.3226 22.4235 12.3201 21.6339 12.3251C19.6927 12.272 17.7845 11.6443 16.1597 10.5864C15.4106 10.0499 14.6412 9.5058 14.0794 8.76171C12.8469 7.38497 12.0092 5.65641 11.6928 3.83421C11.4549 2.56877 11.5511 1.27807 11.5156 0Z" fill="#1D3540"/><path d="M0.00935525 11.3346C0.811629 11.3801 1.61643 11.2966 2.41617 11.3852C5.84036 11.4585 9.16337 13.382 10.9374 16.3101C11.9549 17.9501 12.5015 19.8938 12.4307 21.8248C12.4281 22.4575 12.4383 23.0877 12.4205 23.7179C11.1501 23.6799 9.86691 23.7837 8.6091 23.5382C5.81507 23.0675 3.24628 21.4047 1.69995 19.0308C0.528176 17.3048 -0.0564463 15.1966 0.0042936 13.1137C0.0042936 12.519 0.0042936 11.9268 0.00935525 11.3346Z" fill="#1D3540"/><path d="M19.7225 11.6027C21.0993 11.2965 22.5191 11.3471 23.9186 11.3471L23.9794 11.4078C23.949 12.7314 24.0527 14.0703 23.787 15.3787C23.2277 18.3144 21.284 20.9364 18.6697 22.3764C17.0424 23.2824 15.1746 23.7279 13.3145 23.7076C12.7197 23.7102 12.1224 23.6975 11.5277 23.7152C11.5277 22.6194 11.4821 21.5185 11.6062 20.4277C11.8947 17.788 13.322 15.3306 15.3746 13.6704C16.645 12.6682 18.1382 11.9418 19.7225 11.6027Z" fill="#1D3540"/></g></svg>'
+    const blockedFaviconSvg = 'data:image/svg+xml,' + encodeURIComponent(svgString)
     faviconLink.href = blockedFaviconSvg
     faviconLink.type = 'image/svg+xml'
+}
+
+function verifyAndSetBlockedFavicon() {
+    if (!isExtensionContextValid()) {
+        return
+    }
+    
+    const overlay = document.getElementById('focux-overlay-2m31')
+    if (!overlay || !overlay.isConnected) {
+        return
+    }
+    
+    try {
+        chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
+            if (!isExtensionContextValid() || hasChromeError()) {
+                return
+            }
+            
+            const overlay = document.getElementById('focux-overlay-2m31')
+            if (!overlay || !overlay.isConnected) {
+                return
+            }
+            
+            const blockedWebsites = result['focux-websites-2m31'] || []
+            const timerState = result['focux-timer-2m31']
+            const currentUrl = window.location.href
+            let shouldBlock = false
+
+            const invalidProtocols = /^(chrome|about|edge|file|moz-extension|chrome-extension|opera|arc):/i
+            if (invalidProtocols.test(currentUrl)) {
+                return
+            }
+
+            if (!currentUrl.startsWith('http://') && !currentUrl.startsWith('https://')) {
+                return
+            }
+
+            let isTimerBlocking = false
+            if (timerState && timerState.isActive && timerState.endTime) {
+                const remaining = timerState.endTime - Date.now()
+                if (remaining > 0) {
+                    const whitelistIds = timerState.whitelist || []
+                    let isWhitelisted = false
+
+                    if (whitelistIds.length > 0) {
+                        try {
+                            const currentUrlObj = new URL(currentUrl)
+                            let currentHostname = currentUrlObj.hostname
+                            currentHostname = currentHostname.replace(/^www\./, '')
+
+                            for (const website of blockedWebsites) {
+                                if (whitelistIds.includes(website.id)) {
+                                    let whitelistUrl = website.url
+                                    whitelistUrl = whitelistUrl.replace(/^www\./, '')
+                                    if (currentHostname === whitelistUrl) {
+                                        isWhitelisted = true
+                                        break
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                        }
+                    }
+
+                    if (!isWhitelisted) {
+                        shouldBlock = true
+                        isTimerBlocking = true
+                    }
+                }
+            }
+
+            if (!shouldBlock) {
+                try {
+                    const currentUrlObj = new URL(currentUrl)
+                    let currentHostname = currentUrlObj.hostname
+
+                    currentHostname = currentHostname.replace(/^www\./, '')
+
+                    for (const website of blockedWebsites) {
+                        if (!website.active) continue
+
+                        let blockedUrl = website.url
+                        blockedUrl = blockedUrl.replace(/^www\./, '')
+
+                        if (currentHostname === blockedUrl) {
+                            shouldBlock = true
+                            break
+                        }
+                    }
+                } catch (e) {
+                }
+            }
+
+            if (shouldBlock) {
+                setBlockedFavicon()
+            }
+        })
+    } catch (e) {
+        return
+    }
 }
 
 function setBlockedTitle() {
@@ -150,16 +257,20 @@ function restoreTitle() {
 }
 
 function injectBlockingOverlay(isTimer = false, timerState = null) {
-    if (document.getElementById('focux-overlay-2m31')) {
-        const description = document.getElementById('focux-description-2m31')
-        const timerDisplay = document.getElementById('focux-timer-display-2m31')
-            if (description) {
-                if (isTimer) {
-                    description.textContent = 'Can\'t access this tab because focus timer is enabled for the given period.'
-                } else {
-                    description.textContent = 'Can\'t access this tab because focus mode is enabled for this domain.'
-                }
+    let existingOverlay = document.getElementById('focux-overlay-2m31')
+    let shadowRoot = null
+    
+    if (existingOverlay && existingOverlay.shadowRoot) {
+        shadowRoot = existingOverlay.shadowRoot
+        const description = shadowRoot.getElementById('focux-description-2m31')
+        const timerDisplay = shadowRoot.getElementById('focux-timer-display-2m31')
+        if (description) {
+            if (isTimer) {
+                description.textContent = 'Can\'t access this tab because focus timer is enabled for the given period.'
+            } else {
+                description.textContent = 'Can\'t access this tab because focus mode is enabled for this domain.'
             }
+        }
         if (timerDisplay && isTimer && timerState && timerState.endTime) {
             const updateTimer = () => {
                 const remaining = Math.max(0, timerState.endTime - Date.now())
@@ -195,97 +306,223 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
         return
     }
 
-    const style = document.createElement('style')
-    style.id = 'focux-style-2m31'
-    style.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
-
-        #focux-overlay-2m31 {
+    const overlay = document.createElement('div')
+    overlay.id = 'focux-overlay-2m31'
+    overlay.setAttribute('data-focux-overlay', 'true')
+    overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100% !important; z-index: 2147483647 !important; pointer-events: auto !important; margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; font-family: "DM Sans", sans-serif !important; font-size: initial !important; line-height: initial !important; color: initial !important; text-align: initial !important; text-transform: initial !important; letter-spacing: initial !important; word-spacing: initial !important; text-shadow: none !important; box-shadow: none !important; opacity: 1 !important; visibility: visible !important; transform: none !important; filter: none !important; backdrop-filter: none !important; overflow: hidden !important; box-sizing: border-box !important;'
+    
+    const hostStyle = document.createElement('style')
+    hostStyle.id = 'focux-host-style-2m31'
+    hostStyle.textContent = `
+        #focux-overlay-2m31,
+        #focux-overlay-2m31::before,
+        #focux-overlay-2m31::after {
+            all: initial !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             z-index: 2147483647 !important;
-            font-family: 'DM Sans', sans-serif !important;
             pointer-events: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
         }
-
-        #focux-overlay-2m31 * {
-            user-select: none !important;
+    `
+    if (!document.getElementById('focux-host-style-2m31')) {
+        document.head.appendChild(hostStyle)
+    }
+    
+    shadowRoot = overlay.attachShadow({ mode: 'open' })
+    
+    const fontLink = document.createElement('link')
+    fontLink.rel = 'stylesheet'
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=block'
+    fontLink.crossOrigin = 'anonymous'
+    shadowRoot.appendChild(fontLink)
+    
+    const style = document.createElement('style')
+    style.textContent = `
+        :host {
+            all: initial;
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2147483647;
+            pointer-events: auto;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #000;
+            box-sizing: border-box;
+            overflow: hidden;
         }
-
-        html {
-            overflow-y: scroll !important;
+        
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: inherit;
+            line-height: inherit;
+            color: inherit;
+            text-align: initial;
+            text-transform: initial;
+            letter-spacing: initial;
+            word-spacing: initial;
+            text-shadow: none;
+            box-shadow: none;
+            opacity: 1;
+            visibility: visible;
+            transform: none;
+            filter: none;
+            backdrop-filter: none;
+            border: none;
+            outline: none;
+            list-style: none;
+            text-decoration: none;
+            vertical-align: baseline;
+            background: transparent;
         }
-
+        
         .focux-wrapper {
-            position: fixed !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            top: 0 !important;
-            left: 0 !important;
-            display: flex !important;
-            justify-content: center !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            background: rgba(0, 0, 0, 0.85) !important;
-            pointer-events: auto !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            pointer-events: auto;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            border: none;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .focux-modal {
-            padding: 20px 30px 20px 30px !important;
-            border-radius: 12px !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            flex-direction: column !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            background: rgba(255, 255, 255, 0.08) !important;
-            backdrop-filter: blur(30px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
-            pointer-events: auto !important;
-            width: 250px !important;
+            padding-top: 20px;
+            padding-right: 30px;
+            padding-bottom: 20px;
+            padding-left: 30px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            width: 290px;
+            min-width: 290px;
+            max-width: 290px;
+            margin: 0;
+            box-sizing: border-box;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            flex-shrink: 0;
+            flex-grow: 0;
+            position: relative;
         }
 
         .focux-header {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin-bottom: 14px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            margin-top: 0;
+            margin-left: 0;
+            margin-right: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
+        }
+
+        .focux-header svg {
+            display: block;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
         }
 
         .focux-breakline {
-            width: 100% !important;
-            height: 1px !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-            margin: 0 0 14px 0 !important;
+            width: 100%;
+            height: 1px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            margin: 0 0 14px 0;
+            padding: 0;
+            background: transparent;
+            box-sizing: border-box;
         }
 
         .focux-description {
-            font-size: 13px !important;
-            max-width: 100% !important;
-            text-align: center !important;
-            font-weight: 400 !important;
-            color: white !important;
-            margin: 0 !important;
+            font-size: 13px;
+            max-width: 100%;
+            text-align: center;
+            font-weight: 400;
+            color: white;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
         }
 
         .focux-timer-display {
-            font-size: 48px !important;
-            font-weight: 700 !important;
-            color: white !important;
-            margin: 0px 0 10px 0 !important;
-            font-variant-numeric: tabular-nums !important;
-            text-align: center !important;
+            font-size: 48px;
+            font-weight: 700;
+            color: white;
+            margin: 0px 0 10px 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            box-sizing: border-box;
+            font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.2;
         }
     `
-    document.head.appendChild(style)
+    shadowRoot.appendChild(style)
 
-    const overlay = document.createElement('div')
-    overlay.id = 'focux-overlay-2m31'
-    overlay.className = 'focux-wrapper'
     let timerHtml = ''
     if (isTimer && timerState && timerState.endTime) {
         const remaining = Math.max(0, timerState.endTime - Date.now())
@@ -304,7 +541,9 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
         }
     }
 
-    overlay.innerHTML = `
+    const wrapper = document.createElement('div')
+    wrapper.className = 'focux-wrapper'
+    wrapper.innerHTML = `
         <div class="focux-modal">
             <div class="focux-header">
                 <svg
@@ -342,10 +581,11 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
             </p>
         </div>
     `
+    shadowRoot.appendChild(wrapper)
 
     if (isTimer && timerState && timerState.endTime) {
         const updateTimer = () => {
-            const timerDisplay = document.getElementById('focux-timer-display-2m31')
+            const timerDisplay = shadowRoot.getElementById('focux-timer-display-2m31')
             const remaining = Math.max(0, timerState.endTime - Date.now())
             
             if (remaining <= 0) {
@@ -378,7 +618,15 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
         }
         window.focuxTimerInterval = interval
     }
+    
     document.body.appendChild(overlay)
+    
+    const htmlStyle = document.createElement('style')
+    htmlStyle.id = 'focux-html-style-2m31'
+    htmlStyle.textContent = 'html { overflow-y: scroll !important; }'
+    if (!document.getElementById('focux-html-style-2m31')) {
+        document.head.appendChild(htmlStyle)
+    }
 
     const preventScroll = function (e) {
         e.preventDefault()
@@ -413,13 +661,25 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
 
     muteAllMedia()
 
-    setBlockedFavicon()
+    if (faviconTimeout) {
+        clearTimeout(faviconTimeout)
+    }
+    faviconTimeout = setTimeout(() => {
+        verifyAndSetBlockedFavicon()
+        faviconTimeout = null
+    }, 1000)
     setBlockedTitle()
 }
 
 function removeBlockingOverlay() {
     const overlay = document.getElementById('focux-overlay-2m31')
-    const style = document.getElementById('focux-style-2m31')
+    const htmlStyle = document.getElementById('focux-html-style-2m31')
+    const hostStyle = document.getElementById('focux-host-style-2m31')
+
+    if (faviconTimeout) {
+        clearTimeout(faviconTimeout)
+        faviconTimeout = null
+    }
 
     if (window.focuxTimerInterval) {
         clearInterval(window.focuxTimerInterval)
@@ -430,8 +690,12 @@ function removeBlockingOverlay() {
         overlay.remove()
     }
 
-    if (style) {
-        style.remove()
+    if (htmlStyle) {
+        htmlStyle.remove()
+    }
+
+    if (hostStyle) {
+        hostStyle.remove()
     }
 
     scrollPreventers.forEach(({ type, handler }) => {
