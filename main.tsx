@@ -91,14 +91,27 @@ export default function Focux() {
                         }
 
                         if (isValidDomain(formattedUrl)) {
-                            setUrl(formattedUrl)
+                            const isExist = storedWebsites.find((website) => {
+                                const normalizedStoredUrl = website.url.replace(
+                                    /^www\./,
+                                    ''
+                                )
+                                return normalizedStoredUrl === formattedUrl
+                            })
+
+                            if (!isExist) {
+                                setUrl(formattedUrl)
+                            }
                         }
                     }
                 )
             })
         } else {
             const websites = localStorage.getItem('focux-websites-2m31')
-            if (websites) setWebsites(JSON.parse(websites) as Website[])
+            if (websites) {
+                const storedWebsites = JSON.parse(websites) as Website[]
+                setWebsites(storedWebsites)
+            }
         }
     }, [])
 
@@ -118,7 +131,10 @@ export default function Focux() {
         <>
             <Header />
 
-            <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+            <Tabs
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+            />
 
             {activeTab === 'blocklist' && (
                 <Websites

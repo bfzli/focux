@@ -69,8 +69,139 @@ export default function Recommendations({
         }
     }
 
+    const handleRemoveSite = (siteUrl: string) => {
+        if (!addedSites.has(siteUrl)) {
+            return
+        }
+
+        const normalizedUrl = siteUrl.replace(/^www\./, '')
+        const newWebsites = websites.filter((website) => {
+            const normalizedWebsiteUrl = website.url.replace(/^www\./, '')
+            return normalizedWebsiteUrl !== normalizedUrl
+        })
+
+        setWebsites(newWebsites)
+        setAddedSites(new Set([...addedSites].filter((site) => site !== siteUrl)))
+
+        const isProd = chrome?.storage
+        if (isProd !== undefined) {
+            chrome.storage.local.set(
+                { 'focux-websites-2m31': newWebsites },
+                () => {
+                    chrome.runtime
+                        .sendMessage({ action: 'broadcastUpdate' })
+                        .catch(() => {})
+                }
+            )
+        } else {
+            localStorage.setItem(
+                'focux-websites-2m31',
+                JSON.stringify(newWebsites)
+            )
+        }
+    }
+
+    const handleAddAll = () => {
+        const sitesToAdd = RECOMMENDED_SITES.filter(
+            (site) => !addedSites.has(site)
+        )
+
+        if (sitesToAdd.length === 0) {
+            return
+        }
+
+        const newWebsites: Website[] = sitesToAdd.map((siteUrl) => ({
+            id: Math.random().toString(36).substring(2, 6),
+            url: siteUrl,
+            active: true
+        }))
+
+        const updatedWebsites = [...newWebsites, ...websites]
+        setWebsites(updatedWebsites)
+        setAddedSites(
+            new Set([...addedSites, ...sitesToAdd])
+        )
+
+        const isProd = chrome?.storage
+        if (isProd !== undefined) {
+            chrome.storage.local.set(
+                { 'focux-websites-2m31': updatedWebsites },
+                () => {
+                    chrome.runtime
+                        .sendMessage({ action: 'broadcastUpdate' })
+                        .catch(() => {})
+                }
+            )
+        } else {
+            localStorage.setItem(
+                'focux-websites-2m31',
+                JSON.stringify(updatedWebsites)
+            )
+        }
+    }
+
+    const handleRemoveAll = () => {
+        const sitesToRemove = RECOMMENDED_SITES.filter((site) =>
+            addedSites.has(site)
+        )
+
+        if (sitesToRemove.length === 0) {
+            return
+        }
+
+        const normalizedSitesToRemove = sitesToRemove.map((site) =>
+            site.replace(/^www\./, '')
+        )
+
+        const newWebsites = websites.filter((website) => {
+            const normalizedWebsiteUrl = website.url.replace(/^www\./, '')
+            return !normalizedSitesToRemove.includes(normalizedWebsiteUrl)
+        })
+
+        setWebsites(newWebsites)
+        setAddedSites(
+            new Set([...addedSites].filter((site) => !sitesToRemove.includes(site)))
+        )
+
+        const isProd = chrome?.storage
+        if (isProd !== undefined) {
+            chrome.storage.local.set(
+                { 'focux-websites-2m31': newWebsites },
+                () => {
+                    chrome.runtime
+                        .sendMessage({ action: 'broadcastUpdate' })
+                        .catch(() => {})
+                }
+            )
+        } else {
+            localStorage.setItem(
+                'focux-websites-2m31',
+                JSON.stringify(newWebsites)
+            )
+        }
+    }
+
+    const availableSites = RECOMMENDED_SITES.filter(
+        (site) => !addedSites.has(site)
+    )
+    const allAdded = availableSites.length === 0
+
     return (
         <div className='recommendations'>
+            {RECOMMENDED_SITES.length > 0 && (
+                <div className='toggle-all-container'>
+                    <span className='toggle-all-label'>
+                        {allAdded ? 'Remove all' : 'Add all'}
+                    </span>
+                    <button
+                        className='recommendation-button'
+                        onClick={allAdded ? handleRemoveAll : handleAddAll}
+                    >
+                        {allAdded ? 'Remove all' : 'Add all'}
+                    </button>
+                </div>
+            )}
+
             <div className='recommendations-list'>
                 {RECOMMENDED_SITES.map((site, index) => {
                     const isAdded = addedSites.has(site)
@@ -101,10 +232,11 @@ export default function Recommendations({
                             </div>
                             <button
                                 className={`recommendation-button ${isAdded ? 'recommendation-button-added' : ''}`}
-                                onClick={() => !isAdded && handleAddSite(site)}
-                                disabled={isAdded}
+                                onClick={() =>
+                                    isAdded ? handleRemoveSite(site) : handleAddSite(site)
+                                }
                             >
-                                {isAdded ? 'Added' : 'Add'}
+                                {isAdded ? 'Remove' : 'Add'}
                             </button>
                         </div>
                     )

@@ -13,8 +13,54 @@ export default function Websites({
         return 0
     })
 
+    const allActive = websites.length > 0 && websites.every((w) => w.active)
+
+    const onToggleAll = () => {
+        const shouldActivate = !allActive
+        const updatedWebsites = websites.map((w) => ({
+            ...w,
+            active: shouldActivate
+        }))
+
+        setWebsites(updatedWebsites)
+
+        const isProd = chrome?.storage
+        if (isProd !== undefined) {
+            chrome.storage.local.set(
+                { 'focux-websites-2m31': updatedWebsites },
+                () => {
+                    chrome.runtime
+                        .sendMessage({ action: 'broadcastUpdate' })
+                        .catch(() => {})
+                }
+            )
+        } else {
+            localStorage.setItem(
+                'focux-websites-2m31',
+                JSON.stringify(updatedWebsites)
+            )
+        }
+    }
+
     return (
         <div className='websites'>
+            {websites.length > 2 && (
+                <div className='toggle-all-container'>
+                    <span className='toggle-all-label'>
+                        {allActive ? 'Disable all' : 'Enable all'}
+                    </span>
+                    <label className='toggle-all-checkbox'>
+                        <input
+                            type='checkbox'
+                            checked={allActive}
+                            onChange={onToggleAll}
+                            className='sr-only peer'
+                        />
+                        <div className="relative w-8 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[17px] after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-white peer-checked:after:bg-[#212331]"></div>
+                    </label>
+                </div>
+            )}
+
             <Input
                 url={url}
                 setUrl={setUrl}

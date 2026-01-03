@@ -370,11 +370,41 @@ input {
     margin-right: 0.5em;
 }
 
+.tabs-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75em;
+}
+
 .tabs {
     display: flex;
     gap: 1em;
     padding: 0;
     border-bottom: none;
+}
+
+.toggle-all-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75em;
+    padding: 0.5em 0.75em;
+    border: 1px solid #2c2e3e;
+    background: #212331;
+    border-radius: 0.5em;
+}
+
+.toggle-all-label {
+    font-size: 0.9em;
+    color: #dfe0e0;
+}
+
+.toggle-all-checkbox {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .tab {
@@ -457,16 +487,28 @@ input {
 }
 
 .recommendation-item.recommendation-added {
+    background: #1a1d28;
+}
+
+.recommendation-item.recommendation-added .website-info {
+    opacity: 0.6;
+}
+
+.recommendation-item.recommendation-added .website-info .favicon {
+    opacity: 0.6;
+}
+
+.recommendation-item.recommendation-added .website-info .websiteText {
     opacity: 0.6;
 }
 
 .recommendation-button {
-    padding: 0.5em 1em;
+    padding: 0.35em 0.75em;
     border: 1px solid #2c2e3e;
     background: #212331;
     border-radius: 0.5em;
     color: #dfe0e0;
-    font-size: 0.85em;
+    font-size: 0.8em;
     cursor: pointer;
     transition: all 0.3s ease-in-out;
     white-space: nowrap;
@@ -483,6 +525,7 @@ input {
 }
 
 .recommendation-button-added {
-    background: #2c2e3e;
-    color: #7f839f;
+    background: #212331;
+    border-color: #2c2e3e;
+    color: #dfe0e0;
 }

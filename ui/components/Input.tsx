@@ -19,7 +19,10 @@ export default function Input({
         formattedUrl = formattedUrl.replace(/^www\./, '')
         formattedUrl = formattedUrl.replace(/\/.*$/, '')
 
-        const isExist = websites.find((website) => website.url === formattedUrl)
+        const isExist = websites.find((website) => {
+            const normalizedStoredUrl = website.url.replace(/^www\./, '')
+            return normalizedStoredUrl === formattedUrl
+        })
 
         if (isExist) {
             setExists(true)
