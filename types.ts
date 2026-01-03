@@ -1,26 +1,48 @@
 export interface Website {
-  id: string;
-  url: string;
-  active: boolean;
+    id: string
+    url: string
+    active: boolean
 }
 
 export interface InputProps {
-  url: string;
-  setUrl: (url: string) => void;
-  setWebsites: (websites: Website[] | ((prev: Website[]) => Website[])) => void;
-  websites: Website[];
+    url: string
+    setUrl: (url: string) => void
+    setWebsites: (
+        websites: Website[] | ((prev: Website[]) => Website[])
+    ) => void
+    websites: Website[]
 }
 
 export interface WebsiteProps {
-  website: Website;
-  websites: Website[];
-  setWebsites: (websites: Website[] | ((prev: Website[]) => Website[])) => void;
-  isLast?: boolean;
+    website: Website
+    websites: Website[]
+    setWebsites: (
+        websites: Website[] | ((prev: Website[]) => Website[])
+    ) => void
+    isLast?: boolean
 }
 
 export interface WebsitesProps {
-  websites: Website[];
-  setWebsites: (websites: Website[] | ((prev: Website[]) => Website[])) => void;
-  url: string;
-  setUrl: (url: string) => void;
+    websites: Website[]
+    setWebsites: (
+        websites: Website[] | ((prev: Website[]) => Website[])
+    ) => void
+    url: string
+    setUrl: (url: string) => void
+}
+
+export interface TabsProps {
+    activeTab: 'blocklist' | 'recommendations'
+    onTabChange: (tab: 'blocklist' | 'recommendations') => void
+}
+
+export interface RecommendationsProps {
+    websites: Website[]
+    setWebsites: (
+        websites: Website[] | ((prev: Website[]) => Website[])
+    ) => void
+}
+
+export interface DeleteIconProps {
+    onClick?: () => void
 }

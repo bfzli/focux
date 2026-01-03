@@ -1,0 +1,11 @@
+{
+    "singleQuote": true,
+    "semi": false,
+    "tabWidth": 4,
+    "trailingComma": "none",
+    "jsxSingleQuote": true,
+    "plugins": ["@ianvs/prettier-plugin-sort-imports"],
+    "importOrder": ["^react", "^@/(.*)$", "^[./]"],
+    "importOrderTypeScriptVersion": "5.0.0",
+    "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"]
+}
