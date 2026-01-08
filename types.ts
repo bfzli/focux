@@ -47,3 +47,15 @@ export interface RecommendationsProps {
 export interface DeleteIconProps {
     onClick?: () => void
 }
+
+export interface TimerState {
+    isActive: boolean
+    endTime: number | null
+    duration: number | null
+    whitelist: string[]
+}
+
+export interface FocusTimerProps {
+    websites: Website[]
+    setWebsites?: (websites: Website[] | ((prev: Website[]) => Website[])) => void
+}

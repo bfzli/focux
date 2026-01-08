@@ -8,6 +8,50 @@ let titleObserver = null
 let faviconObserver = null
 let isBlocking = false
 
+// Check if we're in an iframe and if we should run
+function shouldRunInFrame() {
+    // Always run in the main frame (top window)
+    if (window.self === window.top) {
+        console.log('[Focux] Running in main frame')
+        return true
+    }
+
+    // We're in an iframe - check if it's significant enough to block
+    try {
+        // Check iframe dimensions when available
+        const checkSize = () => {
+            const width = window.innerWidth
+            const height = window.innerHeight
+
+            // Skip tiny iframes (ads, widgets, etc.)
+            // Only block large iframes that are likely app content (like Figma playground)
+            const isLargeFrame = width >= 400 && height >= 300
+
+            console.log('[Focux] In iframe, dimensions:', width, 'x', height, 'shouldRun:', isLargeFrame)
+            return isLargeFrame
+        }
+
+        // If document is ready, check now
+        if (document.readyState !== 'loading') {
+            return checkSize()
+        }
+
+        // Otherwise assume it's significant (will be checked later)
+        return true
+    } catch (e) {
+        console.error('[Focux] Error checking frame size:', e)
+        // On error, skip injection to be safe
+        return false
+    }
+}
+
+// Early exit if we shouldn't run in this frame
+if (!shouldRunInFrame()) {
+    console.log('[Focux] Skipping injection in small iframe')
+    // Don't run anything else in this script
+    throw new Error('Focux: Skipping small iframe')
+}
+
 function isExtensionContextValid() {
     try {
         if (typeof chrome === 'undefined' || !chrome.runtime) {

@@ -18,7 +18,18 @@ export default function Focux() {
     const [activeTab, setActiveTab] = useState<'blocklist' | 'recommendations' | 'focustimer'>(
         'blocklist'
     )
+    const [isTabLoading, setIsTabLoading] = useState<boolean>(true)
     const isInitialLoad = useRef(true)
+    const isInitialTabLoad = useRef(true)
+
+    // Helper to validate tab value
+    const validateTab = (value: any): 'blocklist' | 'recommendations' | 'focustimer' => {
+        const validTabs = ['blocklist', 'recommendations', 'focustimer']
+        if (typeof value === 'string' && validTabs.includes(value)) {
+            return value as 'blocklist' | 'recommendations' | 'focustimer'
+        }
+        return 'blocklist' // Default to blocklist
+    }
 
     const isValidDomain = (formattedUrl: string): boolean => {
         try {
@@ -41,6 +52,42 @@ export default function Focux() {
             return false
         }
     }
+
+    // Load saved tab on mount
+    useEffect(() => {
+        const isProd = chrome?.storage
+
+        if (isProd !== undefined) {
+            chrome.storage.local.get(['focux-active-tab-2m31'], (result) => {
+                const storedTab = result['focux-active-tab-2m31']
+                if (storedTab) {
+                    const validatedTab = validateTab(storedTab)
+                    isInitialTabLoad.current = true
+                    setActiveTab(validatedTab)
+                }
+                setIsTabLoading(false)
+                setTimeout(() => {
+                    isInitialTabLoad.current = false
+                }, 50)
+            })
+        } else {
+            const stored = localStorage.getItem('focux-active-tab-2m31')
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored)
+                    const validatedTab = validateTab(parsed)
+                    isInitialTabLoad.current = true
+                    setActiveTab(validatedTab)
+                } catch {
+                    // Invalid stored value, keep default
+                }
+            }
+            setIsTabLoading(false)
+            setTimeout(() => {
+                isInitialTabLoad.current = false
+            }, 50)
+        }
+    }, [])
 
     useEffect(() => {
         const isProd = chrome?.storage
@@ -134,6 +181,29 @@ export default function Focux() {
                 JSON.stringify(websites)
             )
     }, [websites])
+
+    // Save active tab whenever it changes
+    useEffect(() => {
+        if (isInitialTabLoad.current) {
+            return
+        }
+
+        const isProd = chrome?.storage
+
+        if (isProd !== undefined) {
+            chrome.storage.local.set({ 'focux-active-tab-2m31': activeTab })
+        } else {
+            localStorage.setItem('focux-active-tab-2m31', JSON.stringify(activeTab))
+        }
+    }, [activeTab])
+
+    if (isTabLoading) {
+        return (
+            <>
+                <Header />
+            </>
+        )
+    }
 
     return (
         <>

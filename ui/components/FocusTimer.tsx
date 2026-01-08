@@ -1,18 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Website } from '@/types'
+import type { Website, TimerState, FocusTimerProps } from '@/types'
 import { EmptyIcon } from '@/ui/icons'
-
-interface TimerState {
-    isActive: boolean
-    endTime: number | null
-    duration: number | null
-    whitelist: string[]
-}
-
-interface FocusTimerProps {
-    websites: Website[]
-    setWebsites?: (websites: Website[] | ((prev: Website[]) => Website[])) => void
-}
 
 export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
     const [timerState, setTimerState] = useState<TimerState>({
@@ -22,7 +10,8 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
         whitelist: []
     })
     const [timeLeft, setTimeLeft] = useState<number>(0)
-    const [selectedDuration, setSelectedDuration] = useState<number | null>(10)
+    const [selectedDuration, setSelectedDuration] = useState<number | null>(5)
+    const [isDurationLoading, setIsDurationLoading] = useState<boolean>(true)
     const isInitialLoad = useRef(true)
 
     const durations = [
@@ -32,6 +21,25 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
         { label: '1 hour', minutes: 60 },
         { label: '1 day', minutes: 1440 }
     ]
+
+    // Helper to validate duration value
+    const validateDuration = (value: any): number => {
+        const validMinutes = durations.map(d => d.minutes)
+        if (typeof value === 'number' && validMinutes.includes(value)) {
+            return value
+        }
+        return 5 // Default to 5 minutes
+    }
+
+    // Helper to save duration to storage
+    const saveDurationToStorage = (duration: number) => {
+        const isProd = chrome?.storage
+        if (isProd !== undefined) {
+            chrome.storage.local.set({ 'focux-last-duration-2m31': duration })
+        } else {
+            localStorage.setItem('focux-last-duration-2m31', JSON.stringify(duration))
+        }
+    }
 
     useEffect(() => {
         const isProd = chrome?.storage
@@ -52,6 +60,8 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                     if (stored.isActive && stored.endTime) {
                         const remaining = Math.max(0, stored.endTime - Date.now())
                         setTimeLeft(remaining)
+                        // If timer is active, no need to wait for duration loading
+                        setIsDurationLoading(false)
                     }
                 } else {
                     isInitialLoad.current = false
@@ -76,6 +86,8 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                 if (parsed.isActive && parsed.endTime) {
                     const remaining = Math.max(0, parsed.endTime - Date.now())
                     setTimeLeft(remaining)
+                    // If timer is active, no need to wait for duration loading
+                    setIsDurationLoading(false)
                 }
             } else {
                 isInitialLoad.current = false
@@ -83,6 +95,32 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
             setTimeout(() => {
                 isInitialLoad.current = false
             }, 50)
+        }
+    }, [])
+
+    // Load last selected duration from storage
+    useEffect(() => {
+        const isProd = chrome?.storage
+
+        if (isProd !== undefined) {
+            chrome.storage.local.get(['focux-last-duration-2m31'], (result) => {
+                const storedDuration = result['focux-last-duration-2m31']
+                const validatedDuration = validateDuration(storedDuration)
+                setSelectedDuration(validatedDuration)
+                setIsDurationLoading(false)
+            })
+        } else {
+            const stored = localStorage.getItem('focux-last-duration-2m31')
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored)
+                    const validatedDuration = validateDuration(parsed)
+                    setSelectedDuration(validatedDuration)
+                } catch {
+                    setSelectedDuration(5)
+                }
+            }
+            setIsDurationLoading(false)
         }
     }, [])
 
@@ -105,6 +143,9 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                 setTimeLeft(remaining)
 
                 if (remaining === 0) {
+                    // Preserve the duration that was being used
+                    const lastUsedDuration = timerState.duration
+
                     const newState: TimerState = {
                         isActive: false,
                         endTime: null,
@@ -113,6 +154,12 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                     }
                     setTimerState(newState)
                     setTimeLeft(0)
+
+                    // Set selected duration back to what the timer was using
+                    if (lastUsedDuration) {
+                        setSelectedDuration(lastUsedDuration)
+                        saveDurationToStorage(lastUsedDuration)
+                    }
 
                     const isProd = chrome?.storage
                     if (isProd !== undefined) {
@@ -164,6 +211,9 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
     }
 
     const stopTimer = () => {
+        // Preserve the duration that was being used
+        const lastUsedDuration = timerState.duration
+
         const newState: TimerState = {
             isActive: false,
             endTime: null,
@@ -172,7 +222,12 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
         }
         setTimerState(newState)
         setTimeLeft(0)
-        setSelectedDuration(null)
+
+        // Set selected duration back to what the timer was using
+        if (lastUsedDuration) {
+            setSelectedDuration(lastUsedDuration)
+            saveDurationToStorage(lastUsedDuration)
+        }
 
         const isProd = chrome?.storage
         if (isProd !== undefined) {
@@ -283,6 +338,14 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
         </div>
     )
 
+    if (isDurationLoading) {
+        return (
+            <div className='focus-timer-container'>
+                <div className='focus-timer-selection'></div>
+            </div>
+        )
+    }
+
     if (timerState.isActive && timerState.endTime) {
         const displayTime = timeLeft > 0 ? timeLeft : Math.max(0, timerState.endTime - Date.now())
         if (displayTime > 0) {
@@ -319,7 +382,10 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                                     ? 'focus-timer-option-selected'
                                     : ''
                             }`}
-                            onClick={() => setSelectedDuration(duration.minutes)}
+                            onClick={() => {
+                                setSelectedDuration(duration.minutes)
+                                saveDurationToStorage(duration.minutes)
+                            }}
                         >
                             {duration.label}
                         </button>
