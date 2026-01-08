@@ -291,7 +291,6 @@ export default function FocusTimer({ websites, setWebsites }: FocusTimerProps) {
                     <div className='focus-timer-active'>
                         <div className='focus-timer-display'>
                             <div className='focus-timer-time'>{formatTime(displayTime)}</div>
-                            <div className='focus-timer-label'>Time Remaining</div>
                         </div>
                         <button
                             className='focus-timer-stop-btn'

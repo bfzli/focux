@@ -681,11 +681,6 @@ input {
     font-variant-numeric: tabular-nums;
 }
 
-.focus-timer-label {
-    font-size: 0.9em;
-    color: #7f839f;
-}
-
 .focus-timer-stop-btn {
     padding: 0.75em 1.5em;
     border: 1px solid #2c2e3e;
