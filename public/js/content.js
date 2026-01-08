@@ -5,7 +5,8 @@ let originalTitle = null
 let originalFavicon = null
 let faviconLink = null
 let titleObserver = null
-let faviconTimeout = null
+let faviconObserver = null
+let isBlocking = false
 
 function isExtensionContextValid() {
     try {
@@ -85,8 +86,22 @@ function restoreMediaVolume() {
 }
 
 function setBlockedFavicon() {
+    // Ensure document.head exists
+    if (!document.head) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setBlockedFavicon, { once: true })
+        } else {
+            setTimeout(setBlockedFavicon, 100)
+        }
+        return
+    }
+
+    const svgString = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M3.23641 2.832C5.02568 1.12369 7.4553 0.12654 9.91778 0.00253282C10.7606 0.00253282 11.6058 0.00759429 12.4486 0C12.4056 0.903506 12.4486 1.80956 12.4233 2.71303C12.3044 4.73263 11.5578 6.70667 10.2999 8.29097C8.66503 10.422 6.16457 11.8518 3.50974 12.2214C2.35062 12.4086 1.17378 12.2897 0.00707354 12.3226C0.0273202 11.328 -0.0359505 10.3308 0.0425053 9.33874C0.270279 6.87879 1.43193 4.52259 3.23641 2.832Z" fill="#1D3540"/><path d="M11.5156 0C12.4191 0.0101229 13.3227 -0.00506151 14.2287 0.00506134C16.4837 0.164503 18.7083 1.03005 20.4064 2.53084C22.2792 4.1379 23.5624 6.4359 23.8914 8.8908C24.0357 10.0296 23.9445 11.1812 24.0002 12.3251C23.2106 12.3226 22.4235 12.3201 21.6339 12.3251C19.6927 12.272 17.7845 11.6443 16.1597 10.5864C15.4106 10.0499 14.6412 9.5058 14.0794 8.76171C12.8469 7.38497 12.0092 5.65641 11.6928 3.83421C11.4549 2.56877 11.5511 1.27807 11.5156 0Z" fill="#1D3540"/><path d="M0.00935525 11.3346C0.811629 11.3801 1.61643 11.2966 2.41617 11.3852C5.84036 11.4585 9.16337 13.382 10.9374 16.3101C11.9549 17.9501 12.5015 19.8938 12.4307 21.8248C12.4281 22.4575 12.4383 23.0877 12.4205 23.7179C11.1501 23.6799 9.86691 23.7837 8.6091 23.5382C5.81507 23.0675 3.24628 21.4047 1.69995 19.0308C0.528176 17.3048 -0.0564463 15.1966 0.0042936 13.1137C0.0042936 12.519 0.0042936 11.9268 0.00935525 11.3346Z" fill="#1D3540"/><path d="M19.7225 11.6027C21.0993 11.2965 22.5191 11.3471 23.9186 11.3471L23.9794 11.4078C23.949 12.7314 24.0527 14.0703 23.787 15.3787C23.2277 18.3144 21.284 20.9364 18.6697 22.3764C17.0424 23.2824 15.1746 23.7279 13.3145 23.7076C12.7197 23.7102 12.1224 23.6975 11.5277 23.7152C11.5277 22.6194 11.4821 21.5185 11.6062 20.4277C11.8947 17.788 13.322 15.3306 15.3746 13.6704C16.645 12.6682 18.1382 11.9418 19.7225 11.6027Z" fill="#1D3540"/></g></svg>'
+    const blockedFaviconSvg = 'data:image/svg+xml,' + encodeURIComponent(svgString)
+
+    // Save original favicon only once
     if (!originalFavicon) {
-        const existingFavicon = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')
+        const existingFavicon = document.querySelector('link[rel*="icon"]')
         if (existingFavicon) {
             originalFavicon = existingFavicon.href
         } else {
@@ -94,19 +109,80 @@ function setBlockedFavicon() {
         }
     }
 
-    if (!faviconLink) {
-        faviconLink = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]')
-        if (!faviconLink) {
-            faviconLink = document.createElement('link')
-            faviconLink.rel = 'icon'
-            document.head.appendChild(faviconLink)
-        }
+    // Remove all existing favicon links to ensure clean state
+    const allFavicons = document.querySelectorAll('link[rel*="icon"]')
+    allFavicons.forEach(link => {
+        link.remove()
+    })
+
+    // Create and append our favicon
+    faviconLink = document.createElement('link')
+    faviconLink.rel = 'icon'
+    faviconLink.type = 'image/svg+xml'
+    faviconLink.href = blockedFaviconSvg
+    faviconLink.setAttribute('data-focux-favicon', 'true')
+    document.head.appendChild(faviconLink)
+
+    // Start observing for favicon changes to maintain persistence
+    startFaviconObserver()
+}
+
+function startFaviconObserver() {
+    if (faviconObserver) {
+        return // Already observing
     }
 
     const svgString = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M3.23641 2.832C5.02568 1.12369 7.4553 0.12654 9.91778 0.00253282C10.7606 0.00253282 11.6058 0.00759429 12.4486 0C12.4056 0.903506 12.4486 1.80956 12.4233 2.71303C12.3044 4.73263 11.5578 6.70667 10.2999 8.29097C8.66503 10.422 6.16457 11.8518 3.50974 12.2214C2.35062 12.4086 1.17378 12.2897 0.00707354 12.3226C0.0273202 11.328 -0.0359505 10.3308 0.0425053 9.33874C0.270279 6.87879 1.43193 4.52259 3.23641 2.832Z" fill="#1D3540"/><path d="M11.5156 0C12.4191 0.0101229 13.3227 -0.00506151 14.2287 0.00506134C16.4837 0.164503 18.7083 1.03005 20.4064 2.53084C22.2792 4.1379 23.5624 6.4359 23.8914 8.8908C24.0357 10.0296 23.9445 11.1812 24.0002 12.3251C23.2106 12.3226 22.4235 12.3201 21.6339 12.3251C19.6927 12.272 17.7845 11.6443 16.1597 10.5864C15.4106 10.0499 14.6412 9.5058 14.0794 8.76171C12.8469 7.38497 12.0092 5.65641 11.6928 3.83421C11.4549 2.56877 11.5511 1.27807 11.5156 0Z" fill="#1D3540"/><path d="M0.00935525 11.3346C0.811629 11.3801 1.61643 11.2966 2.41617 11.3852C5.84036 11.4585 9.16337 13.382 10.9374 16.3101C11.9549 17.9501 12.5015 19.8938 12.4307 21.8248C12.4281 22.4575 12.4383 23.0877 12.4205 23.7179C11.1501 23.6799 9.86691 23.7837 8.6091 23.5382C5.81507 23.0675 3.24628 21.4047 1.69995 19.0308C0.528176 17.3048 -0.0564463 15.1966 0.0042936 13.1137C0.0042936 12.519 0.0042936 11.9268 0.00935525 11.3346Z" fill="#1D3540"/><path d="M19.7225 11.6027C21.0993 11.2965 22.5191 11.3471 23.9186 11.3471L23.9794 11.4078C23.949 12.7314 24.0527 14.0703 23.787 15.3787C23.2277 18.3144 21.284 20.9364 18.6697 22.3764C17.0424 23.2824 15.1746 23.7279 13.3145 23.7076C12.7197 23.7102 12.1224 23.6975 11.5277 23.7152C11.5277 22.6194 11.4821 21.5185 11.6062 20.4277C11.8947 17.788 13.322 15.3306 15.3746 13.6704C16.645 12.6682 18.1382 11.9418 19.7225 11.6027Z" fill="#1D3540"/></g></svg>'
     const blockedFaviconSvg = 'data:image/svg+xml,' + encodeURIComponent(svgString)
-    faviconLink.href = blockedFaviconSvg
-    faviconLink.type = 'image/svg+xml'
+
+    faviconObserver = new MutationObserver((mutations) => {
+        if (!isBlocking) return
+
+        for (const mutation of mutations) {
+            // Check for removed nodes
+            mutation.removedNodes.forEach(node => {
+                if (node.nodeType === 1 && node.matches && node.matches('link[data-focux-favicon]')) {
+                    // Our favicon was removed, add it back
+                    const newLink = document.createElement('link')
+                    newLink.rel = 'icon'
+                    newLink.type = 'image/svg+xml'
+                    newLink.href = blockedFaviconSvg
+                    newLink.setAttribute('data-focux-favicon', 'true')
+                    document.head.appendChild(newLink)
+                    faviconLink = newLink
+                }
+            })
+
+            // Check for added nodes
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && node.matches && node.matches('link[rel*="icon"]') && !node.hasAttribute('data-focux-favicon')) {
+                    // A non-focux favicon was added, remove it
+                    node.remove()
+                }
+            })
+
+            // Check for attribute changes on favicon links
+            if (mutation.type === 'attributes' && mutation.target.matches && mutation.target.matches('link[data-focux-favicon]')) {
+                if (mutation.target.href !== blockedFaviconSvg) {
+                    mutation.target.href = blockedFaviconSvg
+                }
+            }
+        }
+    })
+
+    faviconObserver.observe(document.head, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['href', 'rel']
+    })
+}
+
+function stopFaviconObserver() {
+    if (faviconObserver) {
+        faviconObserver.disconnect()
+        faviconObserver = null
+    }
 }
 
 function verifyAndSetBlockedFavicon() {
@@ -210,6 +286,16 @@ function verifyAndSetBlockedFavicon() {
 }
 
 function setBlockedTitle() {
+    // Ensure document exists and has title property
+    if (typeof document === 'undefined' || typeof document.title === 'undefined') {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setBlockedTitle, { once: true })
+        } else {
+            setTimeout(setBlockedTitle, 100)
+        }
+        return
+    }
+
     if (originalTitle === null) {
         originalTitle = document.title
     }
@@ -236,14 +322,21 @@ function setBlockedTitle() {
 }
 
 function restoreFavicon() {
-    if (faviconLink && originalFavicon !== null) {
-        if (originalFavicon) {
-            faviconLink.href = originalFavicon
-        } else {
-            faviconLink.remove()
-            faviconLink = null
-        }
+    stopFaviconObserver()
+
+    // Remove our favicon
+    const focuxFavicons = document.querySelectorAll('link[data-focux-favicon]')
+    focuxFavicons.forEach(link => link.remove())
+
+    // Restore original if we had one
+    if (originalFavicon) {
+        const restoreLink = document.createElement('link')
+        restoreLink.rel = 'icon'
+        restoreLink.href = originalFavicon
+        document.head.appendChild(restoreLink)
     }
+
+    faviconLink = null
 }
 
 function restoreTitle() {
@@ -257,9 +350,30 @@ function restoreTitle() {
 }
 
 function injectBlockingOverlay(isTimer = false, timerState = null) {
+    // Ensure document.body exists before trying to inject
+    if (!document.body) {
+        console.log('[Focux] Document body not ready, waiting. ReadyState:', document.readyState)
+        // Body doesn't exist yet, wait for it
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('[Focux] DOMContentLoaded fired, retrying injection')
+                injectBlockingOverlay(isTimer, timerState)
+            }, { once: true })
+        } else {
+            // Readystate is not loading but body is null - wait a bit
+            setTimeout(() => {
+                console.log('[Focux] Retrying injection after timeout')
+                injectBlockingOverlay(isTimer, timerState)
+            }, 100)
+        }
+        return
+    }
+
+    console.log('[Focux] Injecting blocking overlay, isTimer:', isTimer)
+
     let existingOverlay = document.getElementById('focux-overlay-2m31')
     let shadowRoot = null
-    
+
     if (existingOverlay && existingOverlay.shadowRoot) {
         shadowRoot = existingOverlay.shadowRoot
         const description = shadowRoot.getElementById('focux-description-2m31')
@@ -274,7 +388,7 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
         if (timerDisplay && isTimer && timerState && timerState.endTime) {
             const updateTimer = () => {
                 const remaining = Math.max(0, timerState.endTime - Date.now())
-                
+
                 if (remaining <= 0) {
                     if (window.focuxTimerInterval) {
                         clearInterval(window.focuxTimerInterval)
@@ -283,7 +397,7 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
                     checkAndUpdateBlocking()
                     return
                 }
-                
+
                 const totalSeconds = Math.floor(remaining / 1000)
                 const hours = Math.floor(totalSeconds / 3600)
                 const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -303,9 +417,14 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
             }
             window.focuxTimerInterval = interval
         }
+        // Update favicon and title even when overlay already exists
+        isBlocking = true
+        setBlockedFavicon()
+        setBlockedTitle()
         return
     }
 
+    isBlocking = true
     const overlay = document.createElement('div')
     overlay.id = 'focux-overlay-2m31'
     overlay.setAttribute('data-focux-overlay', 'true')
@@ -661,25 +780,17 @@ function injectBlockingOverlay(isTimer = false, timerState = null) {
 
     muteAllMedia()
 
-    if (faviconTimeout) {
-        clearTimeout(faviconTimeout)
-    }
-    faviconTimeout = setTimeout(() => {
-        verifyAndSetBlockedFavicon()
-        faviconTimeout = null
-    }, 1000)
+    // Set favicon and title immediately
+    setBlockedFavicon()
     setBlockedTitle()
 }
 
 function removeBlockingOverlay() {
+    isBlocking = false
+
     const overlay = document.getElementById('focux-overlay-2m31')
     const htmlStyle = document.getElementById('focux-html-style-2m31')
     const hostStyle = document.getElementById('focux-host-style-2m31')
-
-    if (faviconTimeout) {
-        clearTimeout(faviconTimeout)
-        faviconTimeout = null
-    }
 
     if (window.focuxTimerInterval) {
         clearInterval(window.focuxTimerInterval)
@@ -711,12 +822,16 @@ function removeBlockingOverlay() {
 
 function checkAndUpdateBlocking() {
     if (!isExtensionContextValid()) {
+        console.log('[Focux] Extension context invalid, skipping check')
         return
     }
-    
+
+    console.log('[Focux] Checking blocking status for URL:', window.location.href)
+
     try {
         chrome.storage.local.get(['focux-websites-2m31', 'focux-timer-2m31'], function (result) {
             if (!isExtensionContextValid() || hasChromeError()) {
+                console.log('[Focux] Context invalid or error in storage callback')
                 return
             }
             
@@ -843,6 +958,8 @@ function checkAndUpdateBlocking() {
                 }
             }
 
+            console.log('[Focux] Should block:', shouldBlock, 'Timer blocking:', isTimerBlocking)
+
             if (shouldBlock) {
                 injectBlockingOverlay(isTimerBlocking, timerState)
             } else {
@@ -850,6 +967,7 @@ function checkAndUpdateBlocking() {
             }
         })
     } catch (e) {
+        console.error('[Focux] Error in checkAndUpdateBlocking:', e)
         return
     }
 }
@@ -861,12 +979,14 @@ if (isExtensionContextValid()) {
                 return true
             }
             if (request.action === 'updateBlocking') {
+                console.log('[Focux] Received updateBlocking message, URL:', window.location.href)
                 checkAndUpdateBlocking()
                 sendResponse({ success: true })
             }
             return true
         })
     } catch (e) {
+        console.error('[Focux] Error setting up message listener:', e)
     }
 }
 
