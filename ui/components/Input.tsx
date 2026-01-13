@@ -50,7 +50,7 @@ export default function Input({
         const newWebsites = [
             {
                 url: formattedUrl,
-                active: true,
+                active: false,
                 id: Math.random().toString(36).substring(2, 6)
             },
             ...websites
