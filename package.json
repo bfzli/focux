@@ -1,12 +1,12 @@
 {
     "name": "focux-chrome",
     "private": true,
-    "version": "0.0.0",
+    "version": "2.0.0",
     "type": "module",
     "scripts": {
         "extension:dev": "vite build --watch",
         "extension:build": "vite build",
-        "format": "prettier --write ."
+        "extension:format": "prettier --write ."
     },
     "dependencies": {
         "react": "^18.2.0",

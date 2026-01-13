@@ -23,6 +23,10 @@ export default function Header() {
                     <a href='https://bfzli.com' target='_blank'>
                         Bfzli
                     </a>
+                    &nbsp;|&nbsp;
+                    <a href='https://github.com/bfzli/focux' target='_blank'>
+                        GitHub
+                    </a>
                 </span>
             </div>
         </div>
